@@ -135,6 +135,8 @@ body{font-family:'Manrope',-apple-system,sans-serif;background:var(--bg);color:v
 /* FORMS */
 .lbl{font-size:10px;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;font-weight:600}
 input,select{width:100%;background:var(--bg4);border:1px solid var(--brd2);border-radius:var(--r2);color:var(--text);font-size:12.5px;font-family:inherit;padding:8px 10px;transition:border-color .15s,box-shadow .15s;outline:none}
+.incprev{margin-top:8px;padding:9px 11px;background:var(--bg3);border:1px solid var(--brd);border-radius:9px;font-size:12px;line-height:1.55;color:var(--text2)}
+.incprev b{color:var(--green);font-family:'JetBrains Mono',monospace;font-weight:700}
 input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(63,122,209,.12)}
 select option{background:#fff;color:var(--text)}
 .fg{display:flex;flex-direction:column;gap:3px}
@@ -395,14 +397,17 @@ select option{background:#fff;color:var(--text)}
         <div class="sal-row"><span class="sal-lbl">≈ USD</span><span class="sal-val" style="color:var(--acc)" id="sn-usd-d">—</span></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">➕ Записать поступление</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end;margin-bottom:.9rem">
-        <div class="fg"><label class="lbl">Месяц</label><select id="sn-mi"></select></div>
-        <div class="fg"><label class="lbl">Сумма</label><input type="number" id="sn-amt" placeholder="80000"></div>
-        <div class="fg"><label class="lbl">Валюта</label>
-          <select id="sn-ccy"><option value="UAH">UAH</option><option value="IDR">IDR</option><option value="USD">USD</option></select></div>
-        <div class="fg"><label class="lbl">Курс к Rp</label><input type="number" id="sn-rate" placeholder="394"></div>
-        <div class="fg"><label class="lbl">Итого Rp</label><input type="number" id="sn-idr" placeholder="авто"></div>
-        <div style="padding-top:18px"><button class="btn btn-pr btn-sm" id="btn-add-sn" style="width:100%">+ Добавить</button></div>
+      <div style="margin-bottom:.9rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
+          <div class="fg"><label class="lbl">Месяц</label><select id="sn-mi"></select></div>
+          <div class="fg"><label class="lbl">Сумма</label><input type="number" id="sn-amt" placeholder="80000"></div>
+          <div class="fg"><label class="lbl">Валюта</label>
+            <select id="sn-ccy"><option value="UAH">UAH</option><option value="USD">USD</option><option value="IDR">IDR</option></select></div>
+        </div>
+        <div class="fg" style="margin-top:8px"><label class="lbl" id="sn-rate-lbl">Курс обмена: 1 UAH = ? Rp</label><input type="number" id="sn-rate" placeholder="402"></div>
+        <div class="incprev" id="sn-prev">Введите сумму и курс — покажу эквивалент в рупиях</div>
+        <div class="fg" style="margin-top:8px"><label class="lbl">Итого Rp — столько запишется (можно поправить)</label><input type="number" id="sn-idr" placeholder="0"></div>
+        <button class="btn btn-pr btn-sm" id="btn-add-sn" style="width:100%;margin-top:8px">+ Добавить поступление</button>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">📤 Распределение по счетам</div>
       <div id="sn-drows"></div>
@@ -420,14 +425,17 @@ select option{background:#fff;color:var(--text)}
         <div class="sal-row"><span class="sal-lbl">≈ USD</span><span class="sal-val" style="color:var(--acc)" id="vo-usd-d">—</span></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">➕ Записать поступление</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end;margin-bottom:.9rem">
-        <div class="fg"><label class="lbl">Месяц</label><select id="vo-mi"></select></div>
-        <div class="fg"><label class="lbl">Сумма</label><input type="number" id="vo-amt" placeholder="3800"></div>
-        <div class="fg"><label class="lbl">Валюта</label>
-          <select id="vo-ccy"><option value="USDT">USDT</option><option value="USD">USD</option><option value="IDR">IDR</option></select></div>
-        <div class="fg"><label class="lbl">Курс к Rp</label><input type="number" id="vo-rate" placeholder="16300"></div>
-        <div class="fg"><label class="lbl">Итого Rp</label><input type="number" id="vo-idr" placeholder="авто"></div>
-        <div style="padding-top:18px"><button class="btn btn-pr btn-sm" id="btn-add-vo" style="width:100%">+ Добавить</button></div>
+      <div style="margin-bottom:.9rem">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end">
+          <div class="fg"><label class="lbl">Месяц</label><select id="vo-mi"></select></div>
+          <div class="fg"><label class="lbl">Сумма</label><input type="number" id="vo-amt" placeholder="3800"></div>
+          <div class="fg"><label class="lbl">Валюта</label>
+            <select id="vo-ccy"><option value="USDT">USDT</option><option value="USD">USD</option><option value="IDR">IDR</option></select></div>
+        </div>
+        <div class="fg" style="margin-top:8px"><label class="lbl" id="vo-rate-lbl">Курс обмена: 1 USDT = ? Rp</label><input type="number" id="vo-rate" placeholder="17800"></div>
+        <div class="incprev" id="vo-prev">Введите сумму и курс — покажу эквивалент в рупиях</div>
+        <div class="fg" style="margin-top:8px"><label class="lbl">Итого Rp — столько запишется (можно поправить)</label><input type="number" id="vo-idr" placeholder="0"></div>
+        <button class="btn btn-pr btn-sm" id="btn-add-vo" style="width:100%;margin-top:8px">+ Добавить поступление</button>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">📤 Распределение по счетам</div>
       <div id="vo-drows"></div>
@@ -592,9 +600,11 @@ select option{background:#fff;color:var(--text)}
 <div class="moverlay" id="m-rates">
   <div class="modal">
     <div class="mtitle">⚙ Курсы валют<button class="mclose" onclick="cm('m-rates')">✕</button></div>
-    <div class="mrow"><label>1 USD = ? IDR</label><input type="number" id="r-usd"></div>
-    <div class="mrow"><label>1 UAH = ? IDR</label><input type="number" id="r-uah"></div>
+    <div class="mrow"><label>1 USD = ? IDR (рупий за доллар)</label><input type="number" id="r-usd"></div>
+    <div class="mrow"><label>1 UAH = ? IDR (рупий за гривну)</label><input type="number" id="r-uah"></div>
     <div class="mrow"><label>1 USDT = ? USD</label><input type="number" id="r-usdt"></div>
+    <button class="btn btn-gh" id="btn-rates-online" style="width:100%;margin-bottom:.4rem">🌐 Обновить курсы онлайн</button>
+    <p style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:.6rem">Тянет актуальные курсы USD→Rp и UAH→Rp из открытого источника. Можно и вписать вручную.</p>
     <div class="mfooter">
       <button class="btn btn-gh" onclick="cm('m-rates')">Отмена</button>
       <button class="btn btn-save" id="btn-save-rates">💾 Сохранить</button>
@@ -1018,9 +1028,10 @@ function rInc(){
     s.innerHTML='<option value="">—</option>';
     MN.forEach((m,i)=>s.innerHTML+=`<option value="${i}" ${i==cur?'selected':''}>${m}</option>`);
   });
-  ['sn','vo'].forEach(w=>{   // подставить курс по умолчанию для выбранной валюты, если поле пустое
+  ['sn','vo'].forEach(w=>{   // подставить курс по умолчанию, метку и предпросмотр
     const rf=document.getElementById(w+'-rate');
     if(rf&&!rf.value)rf.value=rateFor(document.getElementById(w+'-ccy').value);
+    setRateLabel(w);recalcInc(w);
   });
   const snIdr=D.settings.snUah*D.rates.uahIdr;
   document.getElementById('sn-sal-d').textContent=D.settings.snUah.toLocaleString()+' ₴';
@@ -1092,39 +1103,82 @@ function roundIncDown(idr){
   const step=+(D.settings.incRound||0);
   return step>0?Math.floor(idr/step)*step:Math.round(idr);
 }
-function recalcInc(who){          // пересчитать «Итого Rp» из суммы × курса (с округлением вниз)
-  const amt=+document.getElementById(who+'-amt').value||0;
-  const rate=+document.getElementById(who+'-rate').value||0;
-  const idr=roundIncDown(amt*rate);
-  document.getElementById(who+'-idr').value=idr||'';
+const rpFull=v=>'Rp '+Math.round(v).toLocaleString('ru');   // полное число, напр. Rp 31 520 000
+function setRateLabel(who){
+  const ccy=document.getElementById(who+'-ccy').value;
+  const lbl=document.getElementById(who+'-rate-lbl');
+  if(lbl)lbl.textContent=ccy==='IDR'
+    ?'Рупии вносятся напрямую — курс не нужен'
+    :`Курс обмена: 1 ${ccy} = ? Rp (сколько рупий за 1 ${ccy})`;
 }
-function onIncCcyChange(who){     // подставить курс по выбранной валюте и пересчитать
+function recalcInc(who){          // живой предпросмотр эквивалента + «Итого Rp»
+  const amt=+document.getElementById(who+'-amt').value||0;
+  const ccy=document.getElementById(who+'-ccy').value;
+  let rate=+document.getElementById(who+'-rate').value||0;
+  if(ccy==='IDR')rate=1;
+  const raw=amt*rate, rounded=roundIncDown(raw), step=+(D.settings.incRound||0);
+  const prev=document.getElementById(who+'-prev');
+  if(!amt||(ccy!=='IDR'&&!rate)){
+    if(prev)prev.innerHTML='Введите сумму'+(ccy!=='IDR'?' и курс':'')+' — покажу эквивалент в рупиях';
+  }else if(prev){
+    let t=`${amt.toLocaleString('ru')} ${ccy}`+(ccy!=='IDR'?` × ${rate.toLocaleString('ru')}`:'')+` = <b>${rpFull(raw)}</b> &nbsp;(${fUsdA(raw)})`;
+    if(step>0&&rounded!==Math.round(raw))t+=`<br>↓ округление вниз до ${step.toLocaleString('ru')}: запишем <b>${rpFull(rounded)}</b>`;
+    prev.innerHTML=t;
+  }
+  document.getElementById(who+'-idr').value=rounded||'';
+}
+function onIncCcyChange(who){     // подставить курс по выбранной валюте, обновить метку и предпросмотр
   document.getElementById(who+'-rate').value=rateFor(document.getElementById(who+'-ccy').value);
-  recalcInc(who);
+  setRateLabel(who);recalcInc(who);
+}
+function applyEntryToBalances(e,sign){   // sign=+1 начислить, -1 откатить
+  (e.dist||[]).forEach(r=>{
+    if(!r.accId)return;
+    const a=D.accounts.find(x=>x.id==r.accId);if(!a)return;
+    let cr=r.credited;
+    if(cr==null){const idrAmt=e.idrK*((r.pct||0)/100);
+      cr=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):idrAmt;}
+    a.bal+=cr*sign;
+  });
 }
 function addInc(who){
   const mi=+document.getElementById(who+'-mi').value;
   const amt=+document.getElementById(who+'-amt').value;
   const ccy=document.getElementById(who+'-ccy').value;
-  const rate=+document.getElementById(who+'-rate').value||rateFor(ccy);
+  let rate=+document.getElementById(who+'-rate').value||rateFor(ccy);
+  if(ccy==='IDR')rate=1;
   let idrK=+document.getElementById(who+'-idr').value||0;   // итог можно править вручную
   if(isNaN(mi)||!amt){toast('Заполните месяц и сумму','err');return}
   if(!idrK)idrK=roundIncDown(amt*rate);
   const dist=(who==='sn'?distSn:distVo).map(r=>({...r}));
-  D.incLog[who].push({id:Date.now(),mi,amt,ccy,rate,idrK,dist,date:new Date().toLocaleDateString('ru')});
-  dist.forEach(r=>{
-    if(!r.accId||!r.pct)return;
-    const a=D.accounts.find(x=>x.id==r.accId);if(!a)return;
+  dist.forEach(r=>{   // запоминаем фактически зачисленное на каждый счёт (для точного отката)
+    if(!r.accId||!r.pct){r.credited=0;return;}
+    const a=D.accounts.find(x=>x.id==r.accId);if(!a){r.credited=0;return;}
     const idrAmt=idrK*(r.pct/100);
-    const inCcy=a.ccy==='IDR'?idrAmt:
-      a.ccy==='UAH'?idrAmt/D.rates.uahIdr:
-      a.ccy==='USD'?idrAmt/D.rates.usdIdr:
-      a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):idrAmt;
-    a.bal+=inCcy;
+    r.credited=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):idrAmt;
   });
+  const entry={id:Date.now(),mi,amt,ccy,rate,idrK,dist,date:new Date().toLocaleDateString('ru')};
+  D.incLog[who].push(entry);
+  applyEntryToBalances(entry,1);
   lsSave();
   document.getElementById(who+'-amt').value='';document.getElementById(who+'-idr').value='';
+  recalcInc(who);
   rLog(who);rAccTotals();upHdr();rIncTbl();toast('Записано ✓');
+}
+function editInc(who,id){   // загрузить запись обратно в форму для исправления
+  const e=D.incLog[who].find(x=>x.id===id);if(!e)return;
+  applyEntryToBalances(e,-1);                       // откатить влияние на балансы
+  D.incLog[who]=D.incLog[who].filter(x=>x.id!==id); // убрать старую запись
+  document.getElementById(who+'-mi').value=e.mi;
+  document.getElementById(who+'-amt').value=e.amt;
+  document.getElementById(who+'-ccy').value=e.ccy;
+  document.getElementById(who+'-rate').value=e.rate||rateFor(e.ccy);
+  if(e.dist){const d=e.dist.map(r=>({...r}));if(who==='sn')distSn=d;else distVo=d;rDist(who);}
+  setRateLabel(who);recalcInc(who);
+  document.getElementById(who+'-idr').value=e.idrK;  // прежний итог — можно поправить
+  lsSave();rLog(who);rAccTotals();upHdr();rIncTbl();
+  toast('Исправьте значения и нажмите «Добавить»');
+  document.getElementById(who+'-amt').scrollIntoView({behavior:'smooth',block:'center'});
 }
 function saveInc(who){
   D.distTpl[who]=(who==='sn'?distSn:distVo).map(r=>({...r}));
@@ -1144,15 +1198,19 @@ function rLog(who){
         <div class="inc-entry-top">
           <span style="color:var(--acc2);font-family:'JetBrains Mono',monospace">${MN[e.mi]}</span>
           <span style="color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace">${e.amt.toLocaleString()} ${e.ccy}${e.rate&&e.ccy!=='IDR'?' @'+(+e.rate).toLocaleString('ru'):''} → ${fRpA(e.idrK)} / ${fUsdA(e.idrK)}</span>
-          <button class="btn btn-r btn-sm" style="margin-left:auto" onclick="delInc('${who}',${e.id})">✕</button>
+          <button class="btn btn-gh btn-sm" style="margin-left:auto" title="Исправить" onclick="editInc('${who}',${e.id})">✏️</button>
+          <button class="btn btn-r btn-sm" title="Удалить" onclick="delInc('${who}',${e.id})">✕</button>
         </div>
         <div style="color:var(--text3);font-size:10px">Распред.: ${ds}</div>
       </div>`;
     }).join('');
 }
 function delInc(who,id){
-  D.incLog[who]=D.incLog[who].filter(e=>e.id!==id);
-  lsSave();rLog(who);rIncTbl();toast('Удалено');
+  const e=D.incLog[who].find(x=>x.id===id);
+  if(e&&!confirm('Удалить это поступление? Сумма будет вычтена из баланса счетов.'))return;
+  if(e)applyEntryToBalances(e,-1);   // откатить влияние на балансы
+  D.incLog[who]=D.incLog[who].filter(x=>x.id!==id);
+  lsSave();rLog(who);rIncTbl();rAccTotals();upHdr();toast('Удалено');
 }
 function toggleIncCcy(){incCcy=incCcy==='IDR'?'USD':'IDR';rIncTbl();}
 function rIncTbl(){
@@ -1501,6 +1559,21 @@ function showRecoveryCode(code){
     </div>
     <div style="font-size:11px;color:var(--amber);margin-top:8px;line-height:1.5">⚠️ Сохрани код в своей почте прямо сейчас. Закроешь — больше не покажем. Кто знает код — сможет восстановить доступ, поэтому держи письмо в надёжной почте.</div>`;
 }
+async function fetchRatesOnline(){
+  const btn=document.getElementById('btn-rates-online');const old=btn?btn.textContent:'';
+  if(btn){btn.textContent='⏳ Загрузка…';btn.disabled=true;}
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'});
+    const j=await r.json();
+    if(j.result!=='success'||!j.rates||!j.rates.IDR||!j.rates.UAH)throw new Error('источник не отдал нужные валюты');
+    const usdIdr=Math.round(j.rates.IDR), uahIdr=+(j.rates.IDR/j.rates.UAH).toFixed(2);
+    document.getElementById('r-usd').value=usdIdr;
+    document.getElementById('r-uah').value=uahIdr;
+    if(!+document.getElementById('r-usdt').value)document.getElementById('r-usdt').value=1;
+    toast('Курсы получены: 1$='+usdIdr.toLocaleString('ru')+' Rp · 1₴='+uahIdr+' Rp. Нажмите «Сохранить».');
+  }catch(e){toast('Не удалось получить курсы: '+e.message,'err');}
+  finally{if(btn){btn.textContent=old;btn.disabled=false;}}
+}
 function rCatEd(elId,cats,type){
   const el=document.getElementById(elId);if(!el)return;
   el.innerHTML=cats.map((c,i)=>`
@@ -1541,6 +1614,7 @@ function bindButtons(){
       usdtUsd:+document.getElementById('r-usdt').value||1};
     lsSave();cm('m-rates');upHdr();rAll();toast('Курсы обновлены ✓');
   };
+  document.getElementById('btn-rates-online').onclick=fetchRatesOnline;
   document.getElementById('btn-add-sn').onclick=()=>addInc('sn');
   document.getElementById('btn-add-vo').onclick=()=>addInc('vo');
   ['sn','vo'].forEach(w=>{
