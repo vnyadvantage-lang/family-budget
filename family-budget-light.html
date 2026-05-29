@@ -395,12 +395,14 @@ select option{background:#fff;color:var(--text)}
         <div class="sal-row"><span class="sal-lbl">≈ USD</span><span class="sal-val" style="color:var(--acc)" id="sn-usd-d">—</span></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">➕ Записать поступление</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:.9rem">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end;margin-bottom:.9rem">
         <div class="fg"><label class="lbl">Месяц</label><select id="sn-mi"></select></div>
         <div class="fg"><label class="lbl">Сумма</label><input type="number" id="sn-amt" placeholder="80000"></div>
         <div class="fg"><label class="lbl">Валюта</label>
           <select id="sn-ccy"><option value="UAH">UAH</option><option value="IDR">IDR</option><option value="USD">USD</option></select></div>
-        <div style="padding-top:18px"><button class="btn btn-pr btn-sm" id="btn-add-sn">+ Добавить</button></div>
+        <div class="fg"><label class="lbl">Курс к Rp</label><input type="number" id="sn-rate" placeholder="394"></div>
+        <div class="fg"><label class="lbl">Итого Rp</label><input type="number" id="sn-idr" placeholder="авто"></div>
+        <div style="padding-top:18px"><button class="btn btn-pr btn-sm" id="btn-add-sn" style="width:100%">+ Добавить</button></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">📤 Распределение по счетам</div>
       <div id="sn-drows"></div>
@@ -418,12 +420,14 @@ select option{background:#fff;color:var(--text)}
         <div class="sal-row"><span class="sal-lbl">≈ USD</span><span class="sal-val" style="color:var(--acc)" id="vo-usd-d">—</span></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">➕ Записать поступление</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:.9rem">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end;margin-bottom:.9rem">
         <div class="fg"><label class="lbl">Месяц</label><select id="vo-mi"></select></div>
         <div class="fg"><label class="lbl">Сумма</label><input type="number" id="vo-amt" placeholder="3800"></div>
         <div class="fg"><label class="lbl">Валюта</label>
           <select id="vo-ccy"><option value="USDT">USDT</option><option value="USD">USD</option><option value="IDR">IDR</option></select></div>
-        <div style="padding-top:18px"><button class="btn btn-pr btn-sm" id="btn-add-vo">+ Добавить</button></div>
+        <div class="fg"><label class="lbl">Курс к Rp</label><input type="number" id="vo-rate" placeholder="16300"></div>
+        <div class="fg"><label class="lbl">Итого Rp</label><input type="number" id="vo-idr" placeholder="авто"></div>
+        <div style="padding-top:18px"><button class="btn btn-pr btn-sm" id="btn-add-vo" style="width:100%">+ Добавить</button></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">📤 Распределение по счетам</div>
       <div id="vo-drows"></div>
@@ -541,6 +545,7 @@ select option{background:#fff;color:var(--text)}
       <div class="mrow"><label>ЗП Снежаны (UAH / месяц)</label><input type="number" id="st-sn" value="80000"></div>
       <div class="mrow"><label>Вова — выплата 1 (USDT, 1-е число)</label><input type="number" id="st-v1" value="1900"></div>
       <div class="mrow"><label>Вова — выплата 2 (USDT, 16-е число)</label><input type="number" id="st-v2" value="1900"></div>
+      <div class="mrow"><label>Округлять доход вниз до, Rp (0 = выкл)</label><input type="number" id="st-round" value="0" placeholder="напр. 100000"></div>
       <div class="save-row"><button class="btn btn-save" id="btn-save-settings">💾 Сохранить</button></div>
     </div>
     <div class="card ca">
@@ -1013,6 +1018,10 @@ function rInc(){
     s.innerHTML='<option value="">—</option>';
     MN.forEach((m,i)=>s.innerHTML+=`<option value="${i}" ${i==cur?'selected':''}>${m}</option>`);
   });
+  ['sn','vo'].forEach(w=>{   // подставить курс по умолчанию для выбранной валюты, если поле пустое
+    const rf=document.getElementById(w+'-rate');
+    if(rf&&!rf.value)rf.value=rateFor(document.getElementById(w+'-ccy').value);
+  });
   const snIdr=D.settings.snUah*D.rates.uahIdr;
   document.getElementById('sn-sal-d').textContent=D.settings.snUah.toLocaleString()+' ₴';
   document.getElementById('sn-idr-d').textContent=fRpA(snIdr);
@@ -1071,14 +1080,38 @@ function rDist(who){
     });
   });
 }
+function rateFor(ccy){
+  const r=D.rates;
+  if(ccy==='IDR')return 1;
+  if(ccy==='UAH')return r.uahIdr;
+  if(ccy==='USD')return r.usdIdr;
+  if(ccy==='USDT')return r.usdIdr*r.usdtUsd;
+  return 1;
+}
+function roundIncDown(idr){
+  const step=+(D.settings.incRound||0);
+  return step>0?Math.floor(idr/step)*step:Math.round(idr);
+}
+function recalcInc(who){          // пересчитать «Итого Rp» из суммы × курса (с округлением вниз)
+  const amt=+document.getElementById(who+'-amt').value||0;
+  const rate=+document.getElementById(who+'-rate').value||0;
+  const idr=roundIncDown(amt*rate);
+  document.getElementById(who+'-idr').value=idr||'';
+}
+function onIncCcyChange(who){     // подставить курс по выбранной валюте и пересчитать
+  document.getElementById(who+'-rate').value=rateFor(document.getElementById(who+'-ccy').value);
+  recalcInc(who);
+}
 function addInc(who){
   const mi=+document.getElementById(who+'-mi').value;
-  const amt=+document.getElementById(who==='sn'?'sn-amt':'vo-amt').value;
-  const ccy=document.getElementById(who==='sn'?'sn-ccy':'vo-ccy').value;
+  const amt=+document.getElementById(who+'-amt').value;
+  const ccy=document.getElementById(who+'-ccy').value;
+  const rate=+document.getElementById(who+'-rate').value||rateFor(ccy);
+  let idrK=+document.getElementById(who+'-idr').value||0;   // итог можно править вручную
   if(isNaN(mi)||!amt){toast('Заполните месяц и сумму','err');return}
-  const idrK=toIdr(amt,ccy);
+  if(!idrK)idrK=roundIncDown(amt*rate);
   const dist=(who==='sn'?distSn:distVo).map(r=>({...r}));
-  D.incLog[who].push({id:Date.now(),mi,amt,ccy,idrK,dist,date:new Date().toLocaleDateString('ru')});
+  D.incLog[who].push({id:Date.now(),mi,amt,ccy,rate,idrK,dist,date:new Date().toLocaleDateString('ru')});
   dist.forEach(r=>{
     if(!r.accId||!r.pct)return;
     const a=D.accounts.find(x=>x.id==r.accId);if(!a)return;
@@ -1090,7 +1123,8 @@ function addInc(who){
     a.bal+=inCcy;
   });
   lsSave();
-  rLog(who);rAccTotals();upHdr();toast('Записано ✓');
+  document.getElementById(who+'-amt').value='';document.getElementById(who+'-idr').value='';
+  rLog(who);rAccTotals();upHdr();rIncTbl();toast('Записано ✓');
 }
 function saveInc(who){
   D.distTpl[who]=(who==='sn'?distSn:distVo).map(r=>({...r}));
@@ -1109,7 +1143,7 @@ function rLog(who){
       return`<div class="inc-entry">
         <div class="inc-entry-top">
           <span style="color:var(--acc2);font-family:'JetBrains Mono',monospace">${MN[e.mi]}</span>
-          <span style="color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace">${e.amt.toLocaleString()} ${e.ccy} → ${fRpA(e.idrK)} / ${fUsdA(e.idrK)}</span>
+          <span style="color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace">${e.amt.toLocaleString()} ${e.ccy}${e.rate&&e.ccy!=='IDR'?' @'+(+e.rate).toLocaleString('ru'):''} → ${fRpA(e.idrK)} / ${fUsdA(e.idrK)}</span>
           <button class="btn btn-r btn-sm" style="margin-left:auto" onclick="delInc('${who}',${e.id})">✕</button>
         </div>
         <div style="color:var(--text3);font-size:10px">Распред.: ${ds}</div>
@@ -1400,6 +1434,7 @@ function rSet(){
   document.getElementById('st-sn').value=D.settings.snUah;
   document.getElementById('st-v1').value=D.settings.vo1;
   document.getElementById('st-v2').value=D.settings.vo2;
+  document.getElementById('st-round').value=D.settings.incRound||0;
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
   const cs=document.getElementById('cloud-state');
@@ -1412,7 +1447,8 @@ function rSet(){
 function saveSettings(){
   D.settings={snUah:+document.getElementById('st-sn').value||80000,
     vo1:+document.getElementById('st-v1').value||1900,
-    vo2:+document.getElementById('st-v2').value||1900};
+    vo2:+document.getElementById('st-v2').value||1900,
+    incRound:+document.getElementById('st-round').value||0};
   lsSave();toast('Настройки сохранены ✓');
   if(document.getElementById('pg-income').classList.contains('act'))rInc();
 }
@@ -1507,6 +1543,11 @@ function bindButtons(){
   };
   document.getElementById('btn-add-sn').onclick=()=>addInc('sn');
   document.getElementById('btn-add-vo').onclick=()=>addInc('vo');
+  ['sn','vo'].forEach(w=>{
+    document.getElementById(w+'-amt').addEventListener('input',()=>recalcInc(w));
+    document.getElementById(w+'-rate').addEventListener('input',()=>recalcInc(w));
+    document.getElementById(w+'-ccy').addEventListener('change',()=>onIncCcyChange(w));
+  });
   document.getElementById('btn-dist-sn').onclick=()=>addDistRow('sn');
   document.getElementById('btn-dist-vo').onclick=()=>addDistRow('vo');
   document.getElementById('btn-save-sn').onclick=()=>saveInc('sn');
