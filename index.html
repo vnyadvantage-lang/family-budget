@@ -297,6 +297,15 @@ select option{background:#fff;color:var(--text)}
       <input type="email" id="email-inp" placeholder="E-mail (логин)" autocomplete="username">
       <input type="password" id="pw-inp" placeholder="Пароль" autocomplete="current-password">
       <button class="btn btn-save" id="pw-go" style="width:100%;justify-content:center">Войти</button>
+      <button type="button" id="forgot-lnk" style="background:none;border:none;color:var(--acc2);font-size:12px;cursor:pointer;margin-top:10px">Забыли пароль?</button>
+    </div>
+    <div id="rec-box" style="display:none;flex-direction:column;gap:9px">
+      <p style="font-size:11.5px;color:var(--text3);line-height:1.5;margin:0 0 2px">Введите код восстановления из вашей почты и задайте новый пароль.</p>
+      <input type="text" id="rec-code" placeholder="Код восстановления" autocomplete="off">
+      <input type="password" id="rec-np1" placeholder="Новый пароль" autocomplete="new-password">
+      <input type="password" id="rec-np2" placeholder="Повторите новый пароль" autocomplete="new-password">
+      <button class="btn btn-save" id="rec-go" style="width:100%;justify-content:center">Восстановить доступ</button>
+      <button type="button" id="rec-back" style="background:none;border:none;color:var(--acc2);font-size:12px;cursor:pointer">← Назад ко входу</button>
     </div>
     <p class="auth-err" id="auth-err"></p>
   </div>
@@ -551,6 +560,11 @@ select option{background:#fff;color:var(--text)}
       <div class="mrow"><label>Новый пароль</label><input type="password" id="np-1" autocomplete="new-password" placeholder="новый пароль"></div>
       <div class="mrow"><label>Повторите новый пароль</label><input type="password" id="np-2" autocomplete="new-password" placeholder="ещё раз"></div>
       <div class="save-row"><button class="btn btn-save" id="btn-change-pw">🔑 Сменить пароль</button></div>
+      <hr style="border:none;border-top:1px solid var(--brd);margin:1rem 0">
+      <div class="ctitle" style="margin-bottom:.6rem"><span class="l"><span class="dot g"></span>Восстановление по почте</span><span class="tag tp" id="rec-status">нет кода</span></div>
+      <p style="font-size:11.5px;color:var(--text3);line-height:1.5;margin-bottom:.7rem">Создай код восстановления и отправь его себе на почту. Если забудешь пароль — на входе нажмёшь «Забыли пароль?», введёшь код и задашь новый пароль. Данные останутся зашифрованными.</p>
+      <button class="btn btn-gh" id="btn-setup-rec">🛟 Создать код восстановления</button>
+      <div id="rec-out" style="display:none;margin-top:.8rem"></div>
     </div>
   </div>
   <div class="g2 mb2">
@@ -725,23 +739,50 @@ let D=null, _ch={};
 let distSn=[], distVo=[];
 let incCcy='IDR';   // валюта отображения сводной таблицы доходов: 'IDR' | 'USD'
 
-/* ═══════════════ CRYPTO (end-to-end шифрование) ═══════════════ */
-let _cryptoKey=null, _salt=null;
+/* ═══════════════ CRYPTO (end-to-end шифрование) ═══════════════
+   Данные шифрует случайный «ключ данных» (DEK). Сам DEK хранится
+   завёрнутым под паролем и (опционально) под кодом восстановления —
+   поэтому пароль можно сменить/восстановить, не трогая сами данные.
+   Конверт v2: { v:2, wrapPw:{salt,iv,ct}, wrapRc:{...}|null, iv, ct, updated } */
+let _dekRaw=null, _dataKey=null, _wrapPw=null, _wrapRc=null, _loginEmail='';
 function _b64e(buf){return btoa(String.fromCharCode(...new Uint8Array(buf)));}
 function _b64d(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0));}
-async function deriveKey(password,salt){
-  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
+async function deriveKEK(secret,salt){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),'PBKDF2',false,['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,
     {name:'AES-GCM',length:256},false,['encrypt','decrypt']);
 }
+async function wrapDEK(dekRaw,secret){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},await deriveKEK(secret,salt),dekRaw);
+  return {salt:_b64e(salt),iv:_b64e(iv),ct:_b64e(ct)};
+}
+async function unwrapDEK(wrap,secret){
+  const kek=await deriveKEK(secret,_b64d(wrap.salt));
+  const raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:_b64d(wrap.iv)},kek,_b64d(wrap.ct));
+  return new Uint8Array(raw);
+}
+async function importDataKey(dekRaw){return crypto.subtle.importKey('raw',dekRaw,{name:'AES-GCM'},false,['encrypt','decrypt']);}
 async function encEnvelope(obj){
   const iv=crypto.getRandomValues(new Uint8Array(12));
-  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},_cryptoKey,new TextEncoder().encode(JSON.stringify(obj)));
-  return {v:1,salt:_b64e(_salt),iv:_b64e(iv),ct:_b64e(ct),updated:new Date().toISOString()};
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},_dataKey,new TextEncoder().encode(JSON.stringify(obj)));
+  return {v:2,wrapPw:_wrapPw,wrapRc:_wrapRc,iv:_b64e(iv),ct:_b64e(ct),updated:new Date().toISOString()};
 }
-async function decEnvelope(env){
-  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_b64d(env.iv)},_cryptoKey,_b64d(env.ct));
+async function decWithDataKey(env){
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_b64d(env.iv)},_dataKey,_b64d(env.ct));
   return JSON.parse(new TextDecoder().decode(pt));
+}
+async function decV1(env,password){   // старый формат: данные заперты прямо на пароль
+  const key=await deriveKEK(password,_b64d(env.salt));
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_b64d(env.iv)},key,_b64d(env.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function initDEK(password){      // новый DEK (первый запуск или апгрейд с v1)
+  _dekRaw=crypto.getRandomValues(new Uint8Array(32));
+  _dataKey=await importDataKey(_dekRaw);
+  _wrapPw=await wrapDEK(_dekRaw,password);
+  _wrapRc=null;
 }
 
 /* ═══════════════ CLOUD (Supabase REST) ═══════════════ */
@@ -768,7 +809,7 @@ function lsLoad(){try{const v=localStorage.getItem(LSK);return v?JSON.parse(v):n
 async function persist(){
   if(!D)return;
   try{
-    if(!_cryptoKey){localStorage.setItem(LSK,JSON.stringify(D));setSync('ok');return;}
+    if(!_dataKey){localStorage.setItem(LSK,JSON.stringify(D));setSync('ok');return;}
     const env=await encEnvelope(D);
     localStorage.setItem(LSK,JSON.stringify(env));        // локальный зашифрованный кэш
     if(cloudOn()){setSync('sync');await cloudPut(env);}
@@ -1365,6 +1406,8 @@ function rSet(){
   if(cs)cs.innerHTML=cloudOn()
     ?'☁️ Облачная синхронизация включена — данные шифруются и хранятся в облаке.'
     :'⚠️ Облако пока не подключено — данные только в этом браузере. Нужно настроить Supabase.';
+  const rs=document.getElementById('rec-status');
+  if(rs)rs.textContent=_wrapRc?'код создан ✓':'нет кода';
 }
 function saveSettings(){
   D.settings={snUah:+document.getElementById('st-sn').value||80000,
@@ -1376,18 +1419,51 @@ function saveSettings(){
 async function changePassword(){
   const a=document.getElementById('np-1'),b=document.getElementById('np-2');
   const p1=a.value||'',p2=b.value||'';
-  if(AUTH.mode!=='login'||!_cryptoKey){toast('Шифрование не активно','err');return;}
+  if(AUTH.mode!=='login'||!_dekRaw){toast('Шифрование не активно','err');return;}
   if(p1.length<6){toast('Пароль слишком короткий (мин. 6 символов)','err');return;}
   if(p1!==p2){toast('Пароли не совпадают','err');return;}
-  if(!confirm('Сменить пароль? Старый перестанет работать на всех устройствах. Новый пароль восстановить нельзя — убедитесь, что записали его.'))return;
+  if(!confirm('Сменить пароль? Старый перестанет работать на всех устройствах. Запишите новый пароль.'))return;
   try{
     setSync('sync');
-    _salt=crypto.getRandomValues(new Uint8Array(16));   // новая соль
-    _cryptoKey=await deriveKey(p1,_salt);               // новый ключ из нового пароля
-    await persist();                                    // перешифровать данные и залить в облако
+    _wrapPw=await wrapDEK(_dekRaw,p1);   // перезавернуть ключ данных под новый пароль
+    await persist();
     a.value='';b.value='';
     toast('Пароль изменён ✓ Теперь входите с новым паролем');
   }catch(e){setSync('err');toast('Ошибка смены пароля: '+e.message,'err');}
+}
+/* Код восстановления: длинный случайный код. Завернём DEK ещё и под него.
+   Код показываем один раз — пользователь отправляет его себе на почту. */
+function genRecoveryCode(){
+  const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // без похожих символов
+  const r=crypto.getRandomValues(new Uint8Array(20));
+  let s='';for(let i=0;i<20;i++){s+=A[r[i]%A.length];if(i%5===4&&i<19)s+='-';}
+  return s;   // напр. K7M2P-9QRTX-3WZAB-H6NDF
+}
+function normCode(c){return (c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}   // регистр и дефисы не важны
+async function setupRecovery(){
+  if(AUTH.mode!=='login'||!_dekRaw){toast('Сначала войдите','err');return;}
+  if(_wrapRc&&!confirm('Код восстановления уже создан. Создать НОВЫЙ? Старый перестанет работать.'))return;
+  try{
+    setSync('sync');
+    const code=genRecoveryCode();
+    _wrapRc=await wrapDEK(_dekRaw,normCode(code));
+    await persist();
+    showRecoveryCode(code);
+  }catch(e){setSync('err');toast('Ошибка: '+e.message,'err');}
+}
+function showRecoveryCode(code){
+  const box=document.getElementById('rec-out');if(!box)return;
+  const em=_loginEmail||'';
+  const subj=encodeURIComponent('Код восстановления — Семейный бюджет');
+  const body=encodeURIComponent('Сохрани это письмо. Если забудешь пароль от страницы бюджета — на входе нажми «Забыли пароль?» и введи этот код:\n\n'+code+'\n\nПосле этого задашь новый пароль.');
+  box.style.display='block';
+  box.innerHTML=`<div style="font-size:11.5px;color:var(--text2);margin-bottom:6px">Твой код восстановления (показывается один раз):</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--green);letter-spacing:1px;background:var(--bg);padding:10px 12px;border-radius:8px;border:1px solid var(--brd);user-select:all;word-break:break-all">${code}</div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <button class="btn btn-gh btn-sm" onclick="navigator.clipboard&&navigator.clipboard.writeText('${code}').then(()=>toast('Скопировано ✓'))">📋 Копировать</button>
+      <a class="btn btn-gh btn-sm" href="mailto:${em}?subject=${subj}&body=${body}">✉️ Отправить себе на почту</a>
+    </div>
+    <div style="font-size:11px;color:var(--amber);margin-top:8px;line-height:1.5">⚠️ Сохрани код в своей почте прямо сейчас. Закроешь — больше не покажем. Кто знает код — сможет восстановить доступ, поэтому держи письмо в надёжной почте.</div>`;
 }
 function rCatEd(elId,cats,type){
   const el=document.getElementById(elId);if(!el)return;
@@ -1448,6 +1524,7 @@ function bindButtons(){
   document.getElementById('btn-save-ren').onclick=saveRen;
   document.getElementById('btn-save-settings').onclick=saveSettings;
   document.getElementById('btn-change-pw').onclick=changePassword;
+  document.getElementById('btn-setup-rec').onclick=setupRecovery;
   document.getElementById('btn-add-exp-cat').onclick=()=>{
     D.expCats.push({id:'exp_'+Date.now(),name:'Новая категория',color:BCLRS[D.expCats.length%BCLRS.length],plan:Array(12).fill(0)});
     lsSave();rCatEd('ed-exp',D.expCats,'exp');
@@ -1505,26 +1582,27 @@ function initAuth(){
     const pw=document.getElementById('pw-inp').value||'';
     if(!pw){err.textContent='Введите пароль';return;}
     if(AUTH.loginEmailHash){const eh=await sha256(em);if(eh!==AUTH.loginEmailHash){err.textContent='Неверный e-mail';return;}}
+    _loginEmail=em;
     err.textContent='Загрузка…';
     try{
       // ищем существующий зашифрованный конверт: сначала облако, потом локальный кэш
       let env=null,fromCloud=false;
       if(cloudOn()){try{env=await cloudGet();if(env)fromCloud=true;}catch(e){err.textContent='Нет связи с облаком. Проверьте интернет.';return;}}
-      if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct&&p.salt)env=p;}catch{}}}
-      if(env){
-        _salt=_b64d(env.salt);
-        _cryptoKey=await deriveKey(pw,_salt);
-        let dec;try{dec=await decEnvelope(env);}catch{_cryptoKey=null;err.textContent='Неверный пароль';return;}
-        D=mergeDefaults(dec);
+      if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)env=p;}catch{}}}
+      if(env&&env.v===2){
+        let dek;try{dek=await unwrapDEK(env.wrapPw,pw);}catch{err.textContent='Неверный пароль';return;}
+        _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapPw=env.wrapPw;_wrapRc=env.wrapRc||null;
+        D=mergeDefaults(await decWithDataKey(env));
         if(cloudOn()&&!fromCloud)await persist();   // засеять облако из локального кэша
+      }else if(env){
+        // старый конверт v1 → расшифровать паролем и апгрейднуть до v2 (с DEK)
+        let dec;try{dec=await decV1(env,pw);}catch{err.textContent='Неверный пароль';return;}
+        D=mergeDefaults(dec);await initDEK(pw);await persist();
       }else{
-        // первый запуск — этот пароль становится мастер-паролем (ключом шифрования)
-        _salt=crypto.getRandomValues(new Uint8Array(16));
-        _cryptoKey=await deriveKey(pw,_salt);
+        // первый запуск — этот пароль становится мастер-паролем
         let legacy=null;const lv=localStorage.getItem(LSK);
-        if(lv){try{const p=JSON.parse(lv);if(p&&!p.ct)legacy=p;}catch{}}   // миграция старых незашифрованных данных
-        D=mergeDefaults(legacy||defData());
-        await persist();   // создаём первый зашифрованный конверт (локально + облако)
+        if(lv){try{const p=JSON.parse(lv);if(p&&!p.ct)legacy=p;}catch{}}   // миграция незашифрованных данных
+        D=mergeDefaults(legacy||defData());await initDEK(pw);await persist();
       }
       hideGate();bootData();
     }catch(e){err.textContent='Ошибка: '+e.message;}
@@ -1532,6 +1610,36 @@ function initAuth(){
   document.getElementById('pw-go').onclick=go;
   document.getElementById('pw-inp').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
   document.getElementById('email-inp').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
+
+  // ── восстановление по коду ──
+  const pwBox=document.getElementById('pw-box'),recBox=document.getElementById('rec-box');
+  document.getElementById('forgot-lnk').onclick=()=>{pwBox.style.display='none';recBox.style.display='flex';err.textContent='';};
+  document.getElementById('rec-back').onclick=()=>{recBox.style.display='none';pwBox.style.display='flex';err.textContent='';};
+  const recGo=async()=>{
+    if(!window.crypto||!crypto.subtle){err.textContent='Восстановление работает только по https.';return;}
+    const code=normCode(document.getElementById('rec-code').value);
+    const n1=document.getElementById('rec-np1').value||'',n2=document.getElementById('rec-np2').value||'';
+    if(!code){err.textContent='Введите код восстановления';return;}
+    if(n1.length<6){err.textContent='Новый пароль слишком короткий (мин. 6)';return;}
+    if(n1!==n2){err.textContent='Пароли не совпадают';return;}
+    err.textContent='Проверка кода…';
+    try{
+      let env=null;
+      if(cloudOn()){try{env=await cloudGet();}catch(e){err.textContent='Нет связи с облаком.';return;}}
+      if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)env=p;}catch{}}}
+      if(!env||env.v!==2||!env.wrapRc){err.textContent='Для этого аккаунта код восстановления не настроен';return;}
+      let dek;try{dek=await unwrapDEK(env.wrapRc,code);}catch{err.textContent='Неверный код восстановления';return;}
+      _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapRc=env.wrapRc;
+      D=mergeDefaults(await decWithDataKey(env));
+      _wrapPw=await wrapDEK(_dekRaw,n1);   // задаём новый пароль
+      await persist();
+      recBox.style.display='none';pwBox.style.display='flex';
+      hideGate();bootData();
+      toast('Доступ восстановлен ✓ Пароль обновлён');
+    }catch(e){err.textContent='Ошибка: '+e.message;}
+  };
+  document.getElementById('rec-go').onclick=recGo;
+  document.getElementById('rec-np2').addEventListener('keydown',e=>{if(e.key==='Enter')recGo();});
 }
 
 /* ═══════════════ INIT ═══════════════ */
