@@ -540,7 +540,7 @@ select option{background:#fff;color:var(--text)}
         <button class="btn btn-gh" onclick="xprt()">📥 Скачать JSON (полный бэкап)</button>
         <button class="btn btn-gh" onclick="document.getElementById('imp-f').click()">📤 Загрузить JSON</button>
         <input type="file" id="imp-f" accept=".json" style="display:none">
-        <p style="font-size:11.5px;color:var(--text3);line-height:1.5">Данные хранятся в браузере (localStorage) и сохраняются автоматически при каждом изменении. localStorage привязан к этому браузеру и устройству — для переноса на другой компьютер используйте JSON-бэкап. Делайте бэкап перед очисткой кэша браузера.</p>
+        <p style="font-size:11.5px;color:var(--text3);line-height:1.5"><b id="cloud-state">Проверка облака…</b><br>Когда облако подключено, данные шифруются вашим паролем и сохраняются в облако автоматически — заходите с любого устройства по одному паролю. JSON-бэкап ниже — дополнительная подстраховка (можно скачать копию когда угодно).</p>
       </div>
     </div>
   </div>
@@ -626,23 +626,31 @@ select option{background:#fff;color:var(--text)}
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   АВТОРИЗАЦИЯ — доступ только для вас (логин = e-mail + пароль)
+   АВТОРИЗАЦИЯ + ШИФРОВАНИЕ + ОБЛАКО
    ───────────────────────────────────────────────────────────────
-   По умолчанию выключена (mode:'off'), чтобы страница открывалась
-   локально. Включается режимом 'login': вход по вашему e-mail и
-   паролю. E-mail и пароль хранятся НЕ открыто, а в виде SHA-256
-   хэшей (loginEmailHash / loginPassHash) — их подставит Claude Code.
-   Никакой настройки Google не требуется.
+   Вход по e-mail + паролю. Пароль НИГДЕ не хранится (даже хэшем):
+   он используется как ключ шифрования. Все данные шифруются прямо
+   в браузере (AES-GCM, ключ из пароля через PBKDF2). В облако и в
+   публичный исходник попадает только зашифрованный «шифротекст» —
+   ни Supabase, ни кто-либо ещё не видит ваши цифры (end-to-end).
+   Правильность пароля проверяется попыткой расшифровать данные.
 
-   ⚠️ Честно: это «домашний» замок. Он не пускает случайных людей,
-   но человек, который откроет исходный код страницы и поправит этот
-   скрипт, теоретически сможет обойти проверку — на статическом сайте
-   иначе нельзя. Для семейного бюджета этого обычно достаточно.
+   e-mail хранится как SHA-256 хэш — только чтобы подсказать «не тот
+   логин». Безопасность данных держится на пароле-ключе, а не на нём.
    ═══════════════════════════════════════════════════════════════ */
 const AUTH = {
-  mode: 'login',          // 'off' | 'login'  (поставьте 'login', чтобы включить вход)
-  loginEmailHash: '67159e2cb526634d3a8411b2fe2ba4637a52500fd38ddad572e7d7893d5e7a13',     // SHA-256 от вашего e-mail (в нижнем регистре)
-  loginPassHash: '9569548d221efa206d5cc359bcf84421e05f74ed9e147a2c49b3e2ad7824d97d',     // SHA-256 от вашего пароля
+  mode: 'login',          // 'off' | 'login'
+  loginEmailHash: '67159e2cb526634d3a8411b2fe2ba4637a52500fd38ddad572e7d7893d5e7a13',     // SHA-256 от e-mail (нижний регистр)
+};
+
+/* Облачная синхронизация (Supabase). Эти значения ПУБЛИЧНЫЕ и это нормально:
+   данные всё равно зашифрованы паролем на устройстве. Заполнит Claude Code
+   после того, как вы создадите бесплатный проект Supabase (см. инструкцию). */
+const CLOUD = {
+  url:     '',        // напр. https://abcdxyz.supabase.co
+  anonKey: '',        // публичный anon-ключ (Project Settings → API)
+  table:   'budget',
+  rowId:   'main',
 };
 
 /* ═══════════════ CONSTANTS ═══════════════ */
@@ -708,18 +716,63 @@ let D=null, _ch={};
 let distSn=[], distVo=[];
 let incCcy='IDR';   // валюта отображения сводной таблицы доходов: 'IDR' | 'USD'
 
+/* ═══════════════ CRYPTO (end-to-end шифрование) ═══════════════ */
+let _cryptoKey=null, _salt=null;
+function _b64e(buf){return btoa(String.fromCharCode(...new Uint8Array(buf)));}
+function _b64d(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0));}
+async function deriveKey(password,salt){
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,
+    {name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encEnvelope(obj){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},_cryptoKey,new TextEncoder().encode(JSON.stringify(obj)));
+  return {v:1,salt:_b64e(_salt),iv:_b64e(iv),ct:_b64e(ct),updated:new Date().toISOString()};
+}
+async function decEnvelope(env){
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_b64d(env.iv)},_cryptoKey,_b64d(env.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* ═══════════════ CLOUD (Supabase REST) ═══════════════ */
+function cloudOn(){return !!(CLOUD.url&&CLOUD.anonKey);}
+async function cloudGet(){
+  if(!cloudOn())return null;
+  const r=await fetch(`${CLOUD.url}/rest/v1/${CLOUD.table}?id=eq.${CLOUD.rowId}&select=data`,
+    {headers:{apikey:CLOUD.anonKey,Authorization:'Bearer '+CLOUD.anonKey}});
+  if(!r.ok)throw new Error('cloud GET '+r.status);
+  const rows=await r.json();
+  return rows[0]?rows[0].data:null;
+}
+async function cloudPut(env){
+  if(!cloudOn())return;
+  const r=await fetch(`${CLOUD.url}/rest/v1/${CLOUD.table}`,{method:'POST',
+    headers:{apikey:CLOUD.anonKey,Authorization:'Bearer '+CLOUD.anonKey,
+      'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({id:CLOUD.rowId,data:env,updated_at:new Date().toISOString()})});
+  if(!r.ok)throw new Error('cloud PUT '+r.status);
+}
+
 /* ═══════════════ STORAGE ═══════════════ */
 function lsLoad(){try{const v=localStorage.getItem(LSK);return v?JSON.parse(v):null}catch{return null}}
-function lsSave(){
-  try{localStorage.setItem(LSK,JSON.stringify(D));setSync('ok');}
-  catch{setSync('err');toast('Ошибка сохранения','err')}
+async function persist(){
+  if(!D)return;
+  try{
+    if(!_cryptoKey){localStorage.setItem(LSK,JSON.stringify(D));setSync('ok');return;}
+    const env=await encEnvelope(D);
+    localStorage.setItem(LSK,JSON.stringify(env));        // локальный зашифрованный кэш
+    if(cloudOn()){setSync('sync');await cloudPut(env);}
+    setSync('ok');
+  }catch(e){setSync('err');toast('Ошибка сохранения: '+e.message,'err');}
 }
+function lsSave(){persist();}
 let _saveT=null;
-function autoSave(){clearTimeout(_saveT);_saveT=setTimeout(lsSave,450);}
+function autoSave(){clearTimeout(_saveT);_saveT=setTimeout(persist,450);}
 function setSync(s){
-  const el=document.getElementById('h-sync');
-  el.className='sync '+(s==='ok'?'ok':'err');
-  el.textContent=s==='ok'?'● сохранено':'✕ ошибка';
+  const el=document.getElementById('h-sync');if(!el)return;
+  el.className='sync '+(s==='ok'?'ok':s==='sync'?'':'err');
+  el.textContent=s==='ok'?(cloudOn()?'● в облаке':'● сохранено'):s==='sync'?'⟳ синхронизация…':'✕ ошибка';
 }
 
 /* ═══════════════ COMPUTED ═══════════════ */
@@ -1299,6 +1352,10 @@ function rSet(){
   document.getElementById('st-v2').value=D.settings.vo2;
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
+  const cs=document.getElementById('cloud-state');
+  if(cs)cs.innerHTML=cloudOn()
+    ?'☁️ Облачная синхронизация включена — данные шифруются и хранятся в облаке.'
+    :'⚠️ Облако пока не подключено — данные только в этом браузере. Нужно настроить Supabase.';
 }
 function saveSettings(){
   D.settings={snUah:+document.getElementById('st-sn').value||80000,
@@ -1378,7 +1435,7 @@ function bindButtons(){
   document.getElementById('imp-f').onchange=(e)=>{
     const f=e.target.files[0];if(!f)return;
     const r=new FileReader();r.onload=ev=>{
-      try{D={...defData(),...JSON.parse(ev.target.result)};lsSave();rAll();toast('Данные загружены ✓')}
+      try{D=mergeDefaults(JSON.parse(ev.target.result));lsSave();rAll();toast('Данные загружены ✓')}
       catch{toast('Ошибка формата','err')}};r.readAsText(f);
   };
   document.querySelectorAll('.moverlay').forEach(el=>{
@@ -1396,27 +1453,55 @@ function rAll(){
 /* ═══════════════ AUTH GATE ═══════════════ */
 function showGate(sub){document.getElementById('auth-sub').textContent=sub||'Войдите по вашему e-mail и паролю';document.getElementById('auth-gate').classList.add('show');}
 function hideGate(){document.getElementById('auth-gate').classList.remove('show');}
-function authPass(){sessionStorage.setItem('bali_authed','1');hideGate();}
 async function sha256(t){
   const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));
   return[...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
+function mergeDefaults(obj){
+  const d={...defData(),...(obj||{})};
+  if(!d.incLog)d.incLog={sn:[],vo:[]};
+  if(!d.distTpl)d.distTpl={sn:[],vo:[]};
+  if(!d.fact)d.fact={};
+  if(!d.settings)d.settings={snUah:80000,vo1:1900,vo2:1900};
+  if(!d.rates)d.rates=defData().rates;
+  return d;
+}
+function bootData(){rOv();upHdr();}
 function initAuth(){
-  if(AUTH.mode!=='login'){return;}
-  if(sessionStorage.getItem('bali_authed')==='1'){return;}
+  if(AUTH.mode!=='login'){D=mergeDefaults(lsLoad());bootData();return;}
   showGate();
   document.getElementById('g-btn').style.display='none';
   document.getElementById('pw-box').style.display='flex';
+  const err=document.getElementById('auth-err');
   const go=async()=>{
-    const err=document.getElementById('auth-err');
-    if(!window.crypto||!crypto.subtle){err.textContent='Вход работает только по https (на GitHub Pages).';return;}
+    if(!window.crypto||!crypto.subtle){err.textContent='Вход работает только по https (на GitHub Pages), не из локального файла.';return;}
     const em=(document.getElementById('email-inp').value||'').trim().toLowerCase();
     const pw=document.getElementById('pw-inp').value||'';
+    if(!pw){err.textContent='Введите пароль';return;}
+    if(AUTH.loginEmailHash){const eh=await sha256(em);if(eh!==AUTH.loginEmailHash){err.textContent='Неверный e-mail';return;}}
+    err.textContent='Загрузка…';
     try{
-      const[eh,ph]=await Promise.all([sha256(em),sha256(pw)]);
-      if(eh===AUTH.loginEmailHash&&ph===AUTH.loginPassHash){authPass();}
-      else err.textContent='Неверный e-mail или пароль';
-    }catch{err.textContent='Ошибка проверки. Откройте страницу по https.';}
+      // ищем существующий зашифрованный конверт: сначала облако, потом локальный кэш
+      let env=null,fromCloud=false;
+      if(cloudOn()){try{env=await cloudGet();if(env)fromCloud=true;}catch(e){err.textContent='Нет связи с облаком. Проверьте интернет.';return;}}
+      if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct&&p.salt)env=p;}catch{}}}
+      if(env){
+        _salt=_b64d(env.salt);
+        _cryptoKey=await deriveKey(pw,_salt);
+        let dec;try{dec=await decEnvelope(env);}catch{_cryptoKey=null;err.textContent='Неверный пароль';return;}
+        D=mergeDefaults(dec);
+        if(cloudOn()&&!fromCloud)await persist();   // засеять облако из локального кэша
+      }else{
+        // первый запуск — этот пароль становится мастер-паролем (ключом шифрования)
+        _salt=crypto.getRandomValues(new Uint8Array(16));
+        _cryptoKey=await deriveKey(pw,_salt);
+        let legacy=null;const lv=localStorage.getItem(LSK);
+        if(lv){try{const p=JSON.parse(lv);if(p&&!p.ct)legacy=p;}catch{}}   // миграция старых незашифрованных данных
+        D=mergeDefaults(legacy||defData());
+        await persist();   // создаём первый зашифрованный конверт (локально + облако)
+      }
+      hideGate();bootData();
+    }catch(e){err.textContent='Ошибка: '+e.message;}
   };
   document.getElementById('pw-go').onclick=go;
   document.getElementById('pw-inp').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
@@ -1425,18 +1510,11 @@ function initAuth(){
 
 /* ═══════════════ INIT ═══════════════ */
 document.addEventListener('DOMContentLoaded',()=>{
-  const saved=lsLoad();
-  D=saved?{...defData(),...saved}:defData();
-  if(!D.incLog)D.incLog={sn:[],vo:[]};
-  if(!D.distTpl)D.distTpl={sn:[],vo:[]};
-  if(!D.fact)D.fact={};
-  if(!D.settings)D.settings={snUah:80000,vo1:1900,vo2:1900};
   bindButtons();
-  rOv();
-  upHdr();
-  initAuth();
-  // подстраховка от потери данных при закрытии вкладки
-  window.addEventListener('beforeunload',()=>{try{localStorage.setItem(LSK,JSON.stringify(D))}catch{}});
+  initAuth();   // в режиме login данные грузятся ТОЛЬКО после ввода пароля
+  // подстраховка: флашим сохранение при уходе со страницы
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persist();});
+  window.addEventListener('beforeunload',()=>{persist();});
 });
 </script>
 </body>
