@@ -258,6 +258,7 @@ select option{background:#fff;color:var(--text)}
 .mb1{margin-bottom:.75rem}.mb2{margin-bottom:1.2rem}.mt1{margin-top:.75rem}.mt2{margin-top:1.2rem}
 .tag{display:inline-block;padding:3px 9px;border-radius:8px;font-size:10px;font-weight:700}
 .tp{background:rgba(63,122,209,.1);color:var(--acc2)}
+.ccy-tog{cursor:pointer;user-select:none;transition:filter .15s}.ccy-tog:hover{filter:brightness(1.25)}.ccy-tog::before{content:'⇄ '}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:var(--brd3)}
@@ -383,7 +384,6 @@ select option{background:#fff;color:var(--text)}
         <div class="sal-row"><span class="sal-lbl">Выплата — 1-е число</span><span class="sal-val" style="color:var(--pink)" id="sn-sal-d">80,000 ₴</span></div>
         <div class="sal-row"><span class="sal-lbl">≈ Rp</span><span class="sal-val" style="color:var(--green)" id="sn-idr-d">—</span></div>
         <div class="sal-row"><span class="sal-lbl">≈ USD</span><span class="sal-val" style="color:var(--acc)" id="sn-usd-d">—</span></div>
-        <div class="sal-row"><span class="sal-lbl">ЖКХ Украина — 17-е число с гривн. карты</span><span class="sal-val" style="color:var(--amber)">UAH</span></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">➕ Записать поступление</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:.9rem">
@@ -424,7 +424,7 @@ select option{background:#fff;color:var(--text)}
     </div>
   </div>
   <div class="card cg mb2">
-    <div class="ctitle"><span class="l"><span class="dot g"></span>Сводная таблица доходов — план / факт</span></div>
+    <div class="ctitle"><span class="l"><span class="dot g"></span>Сводная таблица доходов — план / факт</span><span class="tag tp ccy-tog" id="inc-ccy-tog" onclick="toggleIncCcy()" title="Переключить валюту отображения">Rp IDR</span></div>
     <div class="tw"><table class="tbl" id="inc-tbl"></table></div>
   </div>
 </div>
@@ -706,6 +706,7 @@ function defData(){
 /* ═══════════════ STATE ═══════════════ */
 let D=null, _ch={};
 let distSn=[], distVo=[];
+let incCcy='IDR';   // валюта отображения сводной таблицы доходов: 'IDR' | 'USD'
 
 /* ═══════════════ STORAGE ═══════════════ */
 function lsLoad(){try{const v=localStorage.getItem(LSK);return v?JSON.parse(v):null}catch{return null}}
@@ -750,7 +751,7 @@ function ink(hex){
 
 /* ═══════════════ FORMATTING ═══════════════ */
 function fRp(val){
-  const rp=val*1000;
+  const rp=val*1e6;
   if(rp>=1e9)return'Rp '+(rp/1e9).toFixed(2)+' млрд';
   if(rp>=1e6)return'Rp '+(rp/1e6).toFixed(2)+' млн';
   if(rp>=1000)return'Rp '+Math.round(rp).toLocaleString('ru');
@@ -1016,8 +1017,12 @@ function delInc(who,id){
   D.incLog[who]=D.incLog[who].filter(e=>e.id!==id);
   lsSave();rLog(who);rIncTbl();toast('Удалено');
 }
+function toggleIncCcy(){incCcy=incCcy==='IDR'?'USD':'IDR';rIncTbl();}
 function rIncTbl(){
   const tbl=document.getElementById('inc-tbl');if(!tbl)return;
+  const isUsd=incCcy==='USD';
+  const F =v=>isUsd?fUsd(v):fRp(v);    // план: значение в млн IDR
+  const FA=v=>isUsd?fUsdA(v):fRpA(v);  // факт: значение в IDR
   const gF=(who,mi)=>D.incLog[who].filter(e=>e.mi===mi).reduce((s,e)=>s+e.idrK,0)||null;
   const hdr=`<thead><tr><th>Источник</th>${MN.map((m,i)=>`<th class="${i===CM?'cm':''}">${m}${i===CM?' ●':''}</th>`).join('')}<th>Итого план</th></tr></thead>`;
   const ti=tiArr();
@@ -1025,13 +1030,15 @@ function rIncTbl(){
     const tot=c.plan.reduce((a,b)=>a+b,0);
     const cells=MN.map((_,i)=>{
       const p=c.plan[i];const f=c.own?gF(c.own,i):null;const cm=i===CM?' cm':'';
-      if(f!==null){const fp=f/1e6;return`<td class="${fp>=p?'hi':'wn'}${cm}">${fRpA(f)}</td>`}
-      return`<td class="${p===0?'z':''}${cm}">${p?fRp(p):'—'}</td>`;
+      if(f!==null){const fp=f/1e6;return`<td class="${fp>=p?'hi':'wn'}${cm}">${FA(f)}</td>`}
+      return`<td class="${p===0?'z':''}${cm}">${p?F(p):'—'}</td>`;
     }).join('');
-    return`<tr><td style="color:${ink(c.color)}">${c.name}</td>${cells}<td class="hi">${fRp(tot)}</td></tr>`;
+    return`<tr><td style="color:${ink(c.color)}">${c.name}</td>${cells}<td class="hi">${F(tot)}</td></tr>`;
   }).join('');
-  const totRow=`<tr class="ttot"><td>ИТОГО</td>${MN.map((_,i)=>`<td class="hi${i===CM?' cm':''}">${fRp(ti[i])}</td>`).join('')}<td class="hi">${fRp(ti.reduce((a,b)=>a+b))}</td></tr>`;
+  const totRow=`<tr class="ttot"><td>ИТОГО</td>${MN.map((_,i)=>`<td class="hi${i===CM?' cm':''}">${F(ti[i])}</td>`).join('')}<td class="hi">${F(ti.reduce((a,b)=>a+b))}</td></tr>`;
   tbl.innerHTML=hdr+'<tbody>'+rows+totRow+'</tbody>';
+  const tog=document.getElementById('inc-ccy-tog');
+  if(tog)tog.textContent=isUsd?'$ USD':'Rp IDR';
 }
 
 /* ═══════════════ PLAN/FACT ═══════════════ */
