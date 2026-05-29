@@ -545,6 +545,15 @@ select option{background:#fff;color:var(--text)}
     </div>
   </div>
   <div class="g2 mb2">
+    <div class="card cb">
+      <div class="ctitle"><span class="l"><span class="dot b"></span>Пароль и шифрование</span></div>
+      <p style="font-size:11.5px;color:var(--text3);line-height:1.5;margin-bottom:.8rem">Пароль — это ключ шифрования. При смене данные заново шифруются новым паролем и сохраняются в облако. Новый пароль <b>восстановить нельзя</b> — запишите его. Со следующего входа (на всех устройствах) — только новый пароль.</p>
+      <div class="mrow"><label>Новый пароль</label><input type="password" id="np-1" autocomplete="new-password" placeholder="новый пароль"></div>
+      <div class="mrow"><label>Повторите новый пароль</label><input type="password" id="np-2" autocomplete="new-password" placeholder="ещё раз"></div>
+      <div class="save-row"><button class="btn btn-save" id="btn-change-pw">🔑 Сменить пароль</button></div>
+    </div>
+  </div>
+  <div class="g2 mb2">
     <div class="card cr">
       <div class="ctitle"><span class="l"><span class="dot r"></span>Категории расходов</span></div>
       <div id="ed-exp"></div>
@@ -1364,6 +1373,22 @@ function saveSettings(){
   lsSave();toast('Настройки сохранены ✓');
   if(document.getElementById('pg-income').classList.contains('act'))rInc();
 }
+async function changePassword(){
+  const a=document.getElementById('np-1'),b=document.getElementById('np-2');
+  const p1=a.value||'',p2=b.value||'';
+  if(AUTH.mode!=='login'||!_cryptoKey){toast('Шифрование не активно','err');return;}
+  if(p1.length<6){toast('Пароль слишком короткий (мин. 6 символов)','err');return;}
+  if(p1!==p2){toast('Пароли не совпадают','err');return;}
+  if(!confirm('Сменить пароль? Старый перестанет работать на всех устройствах. Новый пароль восстановить нельзя — убедитесь, что записали его.'))return;
+  try{
+    setSync('sync');
+    _salt=crypto.getRandomValues(new Uint8Array(16));   // новая соль
+    _cryptoKey=await deriveKey(p1,_salt);               // новый ключ из нового пароля
+    await persist();                                    // перешифровать данные и залить в облако
+    a.value='';b.value='';
+    toast('Пароль изменён ✓ Теперь входите с новым паролем');
+  }catch(e){setSync('err');toast('Ошибка смены пароля: '+e.message,'err');}
+}
 function rCatEd(elId,cats,type){
   const el=document.getElementById(elId);if(!el)return;
   el.innerHTML=cats.map((c,i)=>`
@@ -1422,6 +1447,7 @@ function bindButtons(){
   document.getElementById('btn-save-cat').onclick=saveCatModal;
   document.getElementById('btn-save-ren').onclick=saveRen;
   document.getElementById('btn-save-settings').onclick=saveSettings;
+  document.getElementById('btn-change-pw').onclick=changePassword;
   document.getElementById('btn-add-exp-cat').onclick=()=>{
     D.expCats.push({id:'exp_'+Date.now(),name:'Новая категория',color:BCLRS[D.expCats.length%BCLRS.length],plan:Array(12).fill(0)});
     lsSave();rCatEd('ed-exp',D.expCats,'exp');
