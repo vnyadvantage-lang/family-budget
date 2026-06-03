@@ -703,7 +703,7 @@ const CC={g:'#1f9d6b',r:'#e0603a',a:'#cf8500',p:'#6f5ae0',p2:'#8472ec',t:'#0d948
 /* ═══════════════ DEFAULT DATA ═══════════════ */
 function defData(){
   return{
-    rates:{usdIdr:16300,uahIdr:394,usdtUsd:1,thbIdr:470},
+    rates:{usdIdr:17000,uahIdr:400,usdtUsd:1,thbIdr:580},
     settings:{snUah:80000,vo1:1900,vo2:1900},
     accounts:[
       {id:1,own:'sn',name:'Monobank UAH',bank:'Monobank',ccy:'UAH',bal:15000},
@@ -1620,9 +1620,9 @@ function bindButtons(){
     om('m-rates');
   };
   document.getElementById('btn-save-rates').onclick=()=>{
-    D.rates={usdIdr:+document.getElementById('r-usd').value||16300,
-      thbIdr:+document.getElementById('r-thb').value||470,
-      uahIdr:+document.getElementById('r-uah').value||394,
+    D.rates={usdIdr:+document.getElementById('r-usd').value||17000,
+      thbIdr:+document.getElementById('r-thb').value||580,
+      uahIdr:+document.getElementById('r-uah').value||400,
       usdtUsd:+document.getElementById('r-usdt').value||1};
     lsSave();cm('m-rates');upHdr();rAll();toast('Курсы обновлены ✓');
   };
