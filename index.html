@@ -402,7 +402,7 @@ select option{background:#fff;color:var(--text)}
           <div class="fg"><label class="lbl">Месяц</label><select id="sn-mi"></select></div>
           <div class="fg"><label class="lbl">Сумма</label><input type="number" id="sn-amt" placeholder="80000"></div>
           <div class="fg"><label class="lbl">Валюта</label>
-            <select id="sn-ccy"><option value="UAH">UAH</option><option value="USD">USD</option><option value="IDR">IDR</option></select></div>
+            <select id="sn-ccy"><option value="UAH">UAH</option><option value="USD">USD</option><option value="THB">THB</option><option value="IDR">IDR</option></select></div>
         </div>
         <div class="fg" style="margin-top:8px"><label class="lbl" id="sn-rate-lbl">Курс обмена: 1 UAH = ? Rp</label><input type="number" id="sn-rate" placeholder="402"></div>
         <div class="incprev" id="sn-prev">Введите сумму и курс — покажу эквивалент в рупиях</div>
@@ -430,7 +430,7 @@ select option{background:#fff;color:var(--text)}
           <div class="fg"><label class="lbl">Месяц</label><select id="vo-mi"></select></div>
           <div class="fg"><label class="lbl">Сумма</label><input type="number" id="vo-amt" placeholder="3800"></div>
           <div class="fg"><label class="lbl">Валюта</label>
-            <select id="vo-ccy"><option value="USDT">USDT</option><option value="USD">USD</option><option value="IDR">IDR</option></select></div>
+            <select id="vo-ccy"><option value="USDT">USDT</option><option value="USD">USD</option><option value="THB">THB</option><option value="IDR">IDR</option></select></div>
         </div>
         <div class="fg" style="margin-top:8px"><label class="lbl" id="vo-rate-lbl">Курс обмена: 1 USDT = ? Rp</label><input type="number" id="vo-rate" placeholder="17800"></div>
         <div class="incprev" id="vo-prev">Введите сумму и курс — покажу эквивалент в рупиях</div>
@@ -601,6 +601,7 @@ select option{background:#fff;color:var(--text)}
   <div class="modal">
     <div class="mtitle">⚙ Курсы валют<button class="mclose" onclick="cm('m-rates')">✕</button></div>
     <div class="mrow"><label>1 USD = ? IDR (рупий за доллар)</label><input type="number" id="r-usd"></div>
+    <div class="mrow"><label>1 THB = ? IDR (рупий за бат)</label><input type="number" id="r-thb"></div>
     <div class="mrow"><label>1 UAH = ? IDR (рупий за гривну)</label><input type="number" id="r-uah"></div>
     <div class="mrow"><label>1 USDT = ? USD</label><input type="number" id="r-usdt"></div>
     <button class="btn btn-gh" id="btn-rates-online" style="width:100%;margin-bottom:.4rem">🌐 Обновить курсы онлайн</button>
@@ -622,6 +623,7 @@ select option{background:#fff;color:var(--text)}
     <div class="mrow"><label>Валюта</label>
       <select id="am-ccy">
         <option value="IDR">IDR — Рупии</option><option value="USD">USD — Доллары</option>
+        <option value="THB">THB — Тайские баты</option>
         <option value="UAH">UAH — Гривны</option><option value="USDT">USDT — Tether</option>
         <option value="BTC">BTC — Bitcoin</option><option value="ETH">ETH — Ethereum</option>
       </select></div>
@@ -701,7 +703,7 @@ const CC={g:'#1f9d6b',r:'#e0603a',a:'#cf8500',p:'#6f5ae0',p2:'#8472ec',t:'#0d948
 /* ═══════════════ DEFAULT DATA ═══════════════ */
 function defData(){
   return{
-    rates:{usdIdr:16300,uahIdr:394,usdtUsd:1},
+    rates:{usdIdr:16300,uahIdr:394,usdtUsd:1,thbIdr:470},
     settings:{snUah:80000,vo1:1900,vo2:1900},
     accounts:[
       {id:1,own:'sn',name:'Monobank UAH',bank:'Monobank',ccy:'UAH',bal:15000},
@@ -851,6 +853,7 @@ function toIdr(amt,ccy){
   if(ccy==='USD')return amt*r.usdIdr;
   if(ccy==='UAH')return amt*r.uahIdr;
   if(ccy==='USDT')return amt*r.usdIdr*r.usdtUsd;
+  if(ccy==='THB')return amt*r.thbIdr;
   return amt;
 }
 
@@ -1097,6 +1100,7 @@ function rateFor(ccy){
   if(ccy==='UAH')return r.uahIdr;
   if(ccy==='USD')return r.usdIdr;
   if(ccy==='USDT')return r.usdIdr*r.usdtUsd;
+  if(ccy==='THB')return r.thbIdr;
   return 1;
 }
 function roundIncDown(idr){
@@ -1137,7 +1141,7 @@ function applyEntryToBalances(e,sign){   // sign=+1 начислить, -1 от�
     const a=D.accounts.find(x=>x.id==r.accId);if(!a)return;
     let cr=r.credited;
     if(cr==null){const idrAmt=e.idrK*((r.pct||0)/100);
-      cr=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):idrAmt;}
+      cr=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):a.ccy==='THB'?idrAmt/D.rates.thbIdr:idrAmt;}
     a.bal+=cr*sign;
   });
 }
@@ -1155,7 +1159,7 @@ function addInc(who){
     if(!r.accId||!r.pct){r.credited=0;return;}
     const a=D.accounts.find(x=>x.id==r.accId);if(!a){r.credited=0;return;}
     const idrAmt=idrK*(r.pct/100);
-    r.credited=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):idrAmt;
+    r.credited=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):a.ccy==='THB'?idrAmt/D.rates.thbIdr:idrAmt;
   });
   const entry={id:Date.now(),mi,amt,ccy,rate,idrK,dist,date:new Date().toLocaleDateString('ru')};
   D.incLog[who].push(entry);
@@ -1386,37 +1390,41 @@ function rSav(){
 }
 
 /* ═══════════════ ACCOUNTS ═══════════════ */
-const CSYM={IDR:'Rp ',USD:'$',UAH:'₴',USDT:'',BTC:'₿',ETH:'Ξ'};
+const CSYM={IDR:'Rp ',USD:'$',THB:'฿',UAH:'₴',USDT:'',BTC:'₿',ETH:'Ξ'};
 const OL={sn:'👩 Снежана',vo:'👨 Вова',jt:'👫 Общий'};
 
 function calcAccTotals(){
-  let totIdr=0,totUsd=0,totUah=0,totUsdt=0,byCcy={};
+  let totIdr=0,totUsd=0,totUah=0,totUsdt=0,totThb=0,byCcy={};
   D.accounts.forEach(a=>{
     const idrActual=toIdr(a.bal,a.ccy);
     totIdr+=idrActual;
     totUsd+=idrActual/D.rates.usdIdr;
     if(a.ccy==='UAH')totUah+=a.bal;
     if(a.ccy==='USDT')totUsdt+=a.bal;
+    if(a.ccy==='THB')totThb+=a.bal;
     if(!byCcy[a.ccy])byCcy[a.ccy]={bal:0,idrActual:0};
     byCcy[a.ccy].bal+=a.bal;
     byCcy[a.ccy].idrActual+=idrActual;
   });
-  return{totIdr,totUsd,totUah,totUsdt,byCcy};
+  return{totIdr,totUsd,totUah,totUsdt,totThb,byCcy};
 }
 
 function rAccTotals(){
   if(!document.getElementById('pg-accounts').classList.contains('act'))return;
-  const{totIdr,totUsd,totUah,totUsdt,byCcy}=calcAccTotals();
+  const{totIdr,totUsd,totUah,totUsdt,totThb,byCcy}=calcAccTotals();
   const cards=[
     {l:'Все счета — Rp',v:fRpA(totIdr),s:'≈ $'+Math.round(totUsd).toLocaleString('ru'),c:'b',hi:true},
     {l:'Все счета — USD',v:'$'+Math.round(totUsd).toLocaleString('ru'),s:'эквивалент всех счетов',c:'b'},
     {l:'Рупии (IDR)',v:fRpA(byCcy.IDR?.idrActual||0),s:'$'+Math.round((byCcy.IDR?.idrActual||0)/D.rates.usdIdr).toLocaleString('ru'),c:'g'},
     {l:'Доллары (USD)',v:'$'+(byCcy.USD?.bal||0).toLocaleString('ru'),s:fRpA((byCcy.USD?.bal||0)*D.rates.usdIdr),c:'b'},
+  ];
+  if(byCcy.THB)cards.push({l:'Баты (THB)',v:'฿'+(byCcy.THB?.bal||0).toLocaleString('ru'),s:fRpA(byCcy.THB?.idrActual||0)+' / $'+Math.round((byCcy.THB?.idrActual||0)/D.rates.usdIdr).toLocaleString('ru'),c:'pk'});
+  cards.push(
     {l:'Гривны (UAH)',v:'₴'+(byCcy.UAH?.bal||0).toLocaleString('ru'),s:fRpA(byCcy.UAH?.idrActual||0)+' / $'+Math.round((byCcy.UAH?.idrActual||0)/D.rates.usdIdr).toLocaleString('ru'),c:'a'},
     {l:'Крипта (USDT)',v:(byCcy.USDT?.bal||0).toLocaleString('ru')+' USDT',s:fRpA(byCcy.USDT?.idrActual||0)+' / $'+Math.round((byCcy.USDT?.bal||0)*D.rates.usdtUsd).toLocaleString('ru'),c:'t'},
-  ];
+  );
   document.getElementById('acc-totals').innerHTML=cards.map(c=>{
-    const ac={g:'var(--green)',r:'var(--red)',a:'var(--amber)',p:'var(--indigo)',t:'var(--teal)',b:'var(--acc)'}[c.c]||'var(--brd2)';
+    const ac={g:'var(--green)',r:'var(--red)',a:'var(--amber)',p:'var(--indigo)',t:'var(--teal)',b:'var(--acc)',pk:'#d6336c'}[c.c]||'var(--brd2)';
     return`<div class="acc-tot-card ${c.hi?'highlight':''}" style="border-left:4px solid ${ac}">
       <div class="acc-tot-l"><div class="acc-tot-lbl">${c.l}</div><div class="acc-tot-sub">${c.s}</div></div>
       <div class="acc-tot-val kv ${c.c}">${c.v}</div>
@@ -1440,7 +1448,7 @@ function rAcc(){
     `<div class="acc-add" onclick="openAddAcc()"><div style="font-size:22px;color:var(--text3)">＋</div><span>Добавить счёт</span></div>`;
 
   const{totIdr,byCcy}=calcAccTotals();
-  const CCOLS={IDR:CC.g,USD:CC.b,UAH:CC.a,USDT:CC.t,BTC:'#e0890a',ETH:CC.p2};
+  const CCOLS={IDR:CC.g,USD:CC.b,THB:CC.pk,UAH:CC.a,USDT:CC.t,BTC:'#e0890a',ETH:CC.p2};
   document.getElementById('acc-ccy').innerHTML=Object.entries(byCcy).map(([c,{idrActual}])=>{
     const p=totIdr>0?(idrActual/totIdr*100).toFixed(1):0;const col=CCOLS[c]||CC.p;
     return`<div class="br"><span class="br-lbl" style="color:${col};font-weight:700">${c}</span>
@@ -1569,8 +1577,10 @@ async function fetchRatesOnline(){
     const usdIdr=Math.round(j.rates.IDR), uahIdr=+(j.rates.IDR/j.rates.UAH).toFixed(2);
     document.getElementById('r-usd').value=usdIdr;
     document.getElementById('r-uah').value=uahIdr;
+    let thbMsg='';
+    if(j.rates.THB){const thbIdr=+(j.rates.IDR/j.rates.THB).toFixed(2);document.getElementById('r-thb').value=thbIdr;thbMsg=' · 1฿='+thbIdr+' Rp';}
     if(!+document.getElementById('r-usdt').value)document.getElementById('r-usdt').value=1;
-    toast('Курсы получены: 1$='+usdIdr.toLocaleString('ru')+' Rp · 1₴='+uahIdr+' Rp. Нажмите «Сохранить».');
+    toast('Курсы получены: 1$='+usdIdr.toLocaleString('ru')+' Rp · 1₴='+uahIdr+' Rp'+thbMsg+'. Нажмите «Сохранить».');
   }catch(e){toast('Не удалось получить курсы: '+e.message,'err');}
   finally{if(btn){btn.textContent=old;btn.disabled=false;}}
 }
@@ -1604,12 +1614,14 @@ function xprt(){
 function bindButtons(){
   document.getElementById('btn-rates').onclick=()=>{
     document.getElementById('r-usd').value=D.rates.usdIdr;
+    document.getElementById('r-thb').value=D.rates.thbIdr;
     document.getElementById('r-uah').value=D.rates.uahIdr;
     document.getElementById('r-usdt').value=D.rates.usdtUsd;
     om('m-rates');
   };
   document.getElementById('btn-save-rates').onclick=()=>{
     D.rates={usdIdr:+document.getElementById('r-usd').value||16300,
+      thbIdr:+document.getElementById('r-thb').value||470,
       uahIdr:+document.getElementById('r-uah').value||394,
       usdtUsd:+document.getElementById('r-usdt').value||1};
     lsSave();cm('m-rates');upHdr();rAll();toast('Курсы обновлены ✓');
@@ -1681,7 +1693,7 @@ function mergeDefaults(obj){
   if(!d.distTpl)d.distTpl={sn:[],vo:[]};
   if(!d.fact)d.fact={};
   if(!d.settings)d.settings={snUah:80000,vo1:1900,vo2:1900};
-  if(!d.rates)d.rates=defData().rates;
+  d.rates={...defData().rates,...(d.rates||{})};   // подмешиваем новые курсы (THB и т.п.) в старые данные
   return d;
 }
 function bootData(){rOv();upHdr();}
