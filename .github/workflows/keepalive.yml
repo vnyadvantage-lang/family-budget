@@ -1,0 +1,20 @@
+name: supabase-keepalive
+# Раз в ~3 дня дёргаем Supabase REST, чтобы бесплатный проект не уходил в авто-паузу
+# (free-tier засыпает после ~7 дней без обращений). Ключ публичный — он и так в index.html.
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        env:
+          KEY: sb_publishable_kxz8IbRPLf0K6oscL0B5Jg_y1eRFSvz
+          BASE: https://gvbrnepoekrmupgjvvri.supabase.co
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+            "$BASE/rest/v1/budget?id=eq.main&select=id" || echo 000)
+          echo "Supabase keepalive -> HTTP $code"
