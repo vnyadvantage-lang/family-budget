@@ -563,11 +563,17 @@ select option{background:#fff;color:var(--text)}
     <div class="card ca">
       <div class="ctitle"><span class="l"><span class="dot a"></span>Резервная копия</span></div>
       <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div style="font-size:12px;color:var(--text2);font-weight:600">Облачные снимки (раз в день, хранятся 30):</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <select id="bk-list" style="flex:1;min-width:140px"><option value="">— загрузка… —</option></select>
+          <button class="btn btn-gh" onclick="restoreSnapshot(document.getElementById('bk-list').value)">↩️ Восстановить из снимка</button>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--brd);margin:.3rem 0">
         <button class="btn btn-gh" onclick="xprt()">📥 Скачать JSON (полный бэкап)</button>
         <button class="btn btn-gh" onclick="document.getElementById('imp-f').click()">📤 Загрузить JSON</button>
         <input type="file" id="imp-f" accept=".json" style="display:none">
-        <label style="display:flex;align-items:center;gap:.5rem;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="st-autobk" onchange="localStorage.setItem(LSK+'_autobk',this.checked?'1':'0')" style="width:auto"> Скачивать бэкап-файл раз в день автоматически</label>
-        <p style="font-size:11.5px;color:var(--text3);line-height:1.5">JSON-бэкап — подстраховка независимо от облака: скачать/загрузить копию можно когда угодно. При входе раз в день делается тихий снимок в браузере, а с галочкой выше — ещё и файл на диск.</p>
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="st-autobk" onchange="localStorage.setItem(LSK+'_autobk',this.checked?'1':'0')" style="width:auto"> Ещё и скачивать бэкап-файл на диск раз в день</label>
+        <p style="font-size:11.5px;color:var(--text3);line-height:1.5">Главный бэкап — <b>облачные снимки</b>: раз в день в облако пишется зашифрованный снимок, можно откатиться к любому из последних 30 дней (надёжно, не зависит от браузера). Дополнительно — ручной экспорт/импорт JSON и опц. файл на диск.</p>
       </div>
     </div>
     <div class="card ca">
@@ -1594,6 +1600,7 @@ function rSet(){
   document.getElementById('st-v2').value=D.settings.vo2;
   document.getElementById('st-round').value=D.settings.incRound||0;
   const ab=document.getElementById('st-autobk');if(ab)ab.checked=localStorage.getItem(LSK+'_autobk')!=='0';
+  refreshSnapshotList();
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
   const cs=document.getElementById('cloud-state');
@@ -1708,18 +1715,68 @@ function xprt(silent){
   a.download='bali_budget_'+new Date().toISOString().slice(0,10)+'.json';
   a.click();if(!silent)toast('Файл скачан ✓');
 }
-/* Ежедневный бэкап для безопасности: тихий зашифрованный снимок в браузере (последние 14)
-   + копия-файл на диск раз в день. Не бэкапим заведомо устаревшие офлайн-данные. */
-function _pruneBk(){try{const ks=Object.keys(localStorage).filter(k=>k.indexOf(LSK+'_bk_')===0).sort();while(ks.length>14)localStorage.removeItem(ks.shift());}catch{}}
+/* Ежедневный бэкап. Главный механизм — НАДЁЖНЫЙ облачный снимок: зашифрованная
+   строка-снимок в Supabase (id 'bk-<date>'), раз в день, хранятся последние 30.
+   Не зависит от браузера, не требует ручного скачивания, можно восстановиться из
+   любого дня (Настройки → Резервная копия). Доп. копия — файл на диск (по желанию).
+   Браузерный снимок убран как неэффективный (лежал там же, где данные). Офлайн не
+   бэкапим — данные могут быть устаревшими. */
+const BK_PREFIX='bk-';
+async function cloudSnapshot(envStr){
+  if(!cloudOn()||_cloudDown||!envStr)return;
+  const today=new Date().toISOString().slice(0,10);
+  if(localStorage.getItem(LSK+'_cloudbkdate')===today)return;   // раз в день
+  try{
+    const r=await fetch(`${CLOUD.url}/rest/v1/${CLOUD.table}`,{method:'POST',
+      headers:{apikey:CLOUD.anonKey,Authorization:'Bearer '+CLOUD.anonKey,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+      body:JSON.stringify({id:BK_PREFIX+today,data:JSON.parse(envStr),updated_at:new Date().toISOString()})});
+    if(r.ok){localStorage.setItem(LSK+'_cloudbkdate',today);pruneCloudSnapshots();}
+  }catch{}
+}
+async function listSnapshots(){
+  if(!cloudOn())return [];
+  try{
+    const r=await fetch(`${CLOUD.url}/rest/v1/${CLOUD.table}?id=like.${BK_PREFIX}*&select=id&order=id.desc`,
+      {headers:{apikey:CLOUD.anonKey,Authorization:'Bearer '+CLOUD.anonKey}});
+    if(!r.ok)return [];
+    return (await r.json()).map(x=>x.id);
+  }catch{return [];}
+}
+async function pruneCloudSnapshots(){
+  try{const ids=await listSnapshots();
+    for(const id of ids.slice(30)){   // ids по убыванию → удаляем всё старше 30 последних
+      await fetch(`${CLOUD.url}/rest/v1/${CLOUD.table}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{apikey:CLOUD.anonKey,Authorization:'Bearer '+CLOUD.anonKey}});
+    }}catch{}
+}
+async function restoreSnapshot(id){
+  if(!id){toast('Выберите снимок','err');return;}
+  if(!confirm('Восстановить данные из снимка '+id.replace(BK_PREFIX,'')+'?\nТекущие данные будут заменены (снимки и облачный резерв при этом останутся).'))return;
+  try{
+    const r=await fetch(`${CLOUD.url}/rest/v1/${CLOUD.table}?id=eq.${encodeURIComponent(id)}&select=data`,
+      {headers:{apikey:CLOUD.anonKey,Authorization:'Bearer '+CLOUD.anonKey}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const rows=await r.json();const env=rows[0]&&rows[0].data;
+    if(!env)throw new Error('снимок пуст');
+    const obj=await decWithDataKey(env);   // тот же DEK расшифрует снимок
+    D=mergeDefaults(obj);await persist();rAll();
+    toast('Восстановлено из снимка '+id.replace(BK_PREFIX,'')+' ✓');
+  }catch(e){toast('Не удалось восстановить: '+e.message,'err');}
+}
+async function refreshSnapshotList(){
+  const sel=document.getElementById('bk-list');if(!sel)return;
+  const ids=await listSnapshots();
+  sel.innerHTML=ids.length?ids.map(id=>`<option value="${id}">${id.replace(BK_PREFIX,'')}</option>`).join('')
+    :'<option value="">— снимков пока нет —</option>';
+}
 function maybeDailyBackup(){
   try{
-    if(_cloudDown)return;                                  // офлайн → данные могут быть устаревшими, не бэкапим
-    const today=new Date().toISOString().slice(0,10);
-    if(localStorage.getItem(LSK+'_bkdate')===today)return; // уже сегодня делали
-    localStorage.setItem(LSK+'_bkdate',today);
+    if(_cloudDown)return;                                  // офлайн → данные могут быть устаревшими
     const env=localStorage.getItem(LSK);
-    if(env){try{localStorage.setItem(LSK+'_bk_'+today,env);_pruneBk();}catch{}}  // снимок в браузере
-    if(localStorage.getItem(LSK+'_autobk')!=='0'&&D)xprt(true);                   // копия на диск (можно выключить в Настройках)
+    if(env)cloudSnapshot(env);                             // надёжный облачный снимок (свой guard «раз в день»)
+    const today=new Date().toISOString().slice(0,10);
+    if(localStorage.getItem(LSK+'_autobk')!=='0'&&localStorage.getItem(LSK+'_bkdate')!==today&&D){
+      localStorage.setItem(LSK+'_bkdate',today);xprt(true); // доп. копия-файл на диск (best-effort)
+    }
   }catch{}
 }
 
