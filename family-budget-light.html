@@ -256,6 +256,8 @@ select option{background:#fff;color:var(--text)}
 .toast.warn{background:#fff;border-color:rgba(207,133,0,.35);color:var(--amber3)}
 .toast.err{background:#fff;border-color:rgba(224,96,58,.3);color:var(--red)}
 .toast.show{transform:translateY(0)}
+.cs-msg{font-size:11.5px;line-height:1.4;min-height:14px;margin-top:.3rem;color:var(--text3)}
+.cs-msg.ok{color:var(--green)}.cs-msg.err{color:var(--red)}
 
 .cw{position:relative;width:100%}
 .sep{border:none;border-top:1px solid var(--brd);margin:.75rem 0}
@@ -564,8 +566,31 @@ select option{background:#fff;color:var(--text)}
         <button class="btn btn-gh" onclick="xprt()">📥 Скачать JSON (полный бэкап)</button>
         <button class="btn btn-gh" onclick="document.getElementById('imp-f').click()">📤 Загрузить JSON</button>
         <input type="file" id="imp-f" accept=".json" style="display:none">
-        <p style="font-size:11.5px;color:var(--text3);line-height:1.5"><b id="cloud-state">Проверка облака…</b><br>Когда облако подключено, данные шифруются вашим паролем и сохраняются в облако автоматически — заходите с любого устройства по одному паролю. JSON-бэкап ниже — дополнительная подстраховка (можно скачать копию когда угодно).</p>
+        <p style="font-size:11.5px;color:var(--text3);line-height:1.5">JSON-бэкап — дополнительная подстраховка независимо от облака: скачать копию данных можно когда угодно и загрузить обратно. Полезно сохранять копию раз в пару месяцев.</p>
       </div>
+    </div>
+    <div class="card ca">
+      <div class="ctitle"><span class="l"><span class="dot a"></span>Облако (Supabase)</span></div>
+      <p style="font-size:11.5px;color:var(--text3);line-height:1.5;margin-bottom:.7rem"><b id="cloud-state">Проверка облака…</b></p>
+      <div class="mrow"><label>URL проекта</label><input type="text" id="cs-url" placeholder="https://xxxxx.supabase.co" autocomplete="off" spellcheck="false"></div>
+      <div class="mrow"><label>Публичный ключ (sb_publishable_…)</label><input type="text" id="cs-key" placeholder="sb_publishable_…" autocomplete="off" spellcheck="false"></div>
+      <div class="cs-msg" id="cs-status"></div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">
+        <button class="btn btn-save" onclick="cloudConnect()">☁️ Подключить</button>
+        <button class="btn btn-gh" onclick="cloudResetCfg()">Вернуть встроенный</button>
+      </div>
+      <details style="margin-top:.7rem">
+        <summary style="font-size:11.5px;color:var(--text3);cursor:pointer">Создаёте новый проект Supabase? — SQL для таблицы (нажмите)</summary>
+        <pre style="font-size:10.5px;white-space:pre-wrap;background:var(--bg3);padding:.6rem;border-radius:8px;margin-top:.4rem;color:var(--text2);overflow:auto">create table if not exists budget(
+  id text primary key,
+  data jsonb,
+  updated_at timestamptz default now()
+);
+alter table budget enable row level security;
+create policy "anon all" on budget
+  for all to anon using (true) with check (true);</pre>
+        <p style="font-size:11px;color:var(--text3);line-height:1.5">Supabase → проект → SQL Editor → вставьте и запустите. Затем Settings → API: скопируйте Project URL и публичный ключ сюда → «Подключить». Данные у вас зашифрованы, поэтому открытая RLS-политика безопасна.</p>
+      </details>
     </div>
   </div>
   <div class="g2 mb2">
@@ -686,14 +711,24 @@ const AUTH = {
 };
 
 /* Облачная синхронизация (Supabase). Эти значения ПУБЛИЧНЫЕ и это нормально:
-   данные всё равно зашифрованы паролем на устройстве. Заполнит Claude Code
-   после того, как вы создадите бесплатный проект Supabase (см. инструкцию). */
-const CLOUD = {
+   данные всё равно зашифрованы паролем на устройстве.
+   Адрес проекта можно переопределить прямо в приложении (Настройки → Облако),
+   не трогая код — например, если пришлось поднять новый проект Supabase. */
+const CLOUD_DEFAULT = {
   url:     'https://gvbrnepoekrmupgjvvri.supabase.co',
   anonKey: 'sb_publishable_kxz8IbRPLf0K6oscL0B5Jg_y1eRFSvz',   // публичный ключ — безопасен в браузере (работает только с RLS)
   table:   'budget',
   rowId:   'main',
 };
+const CLOUD_CFG_KEY='cloud_cfg_v1';
+function loadCloudCfg(){
+  try{const o=JSON.parse(localStorage.getItem(CLOUD_CFG_KEY)||'null');
+    if(o&&o.url&&o.anonKey)return {...CLOUD_DEFAULT,url:String(o.url).trim().replace(/\/+$/,''),anonKey:String(o.anonKey).trim()};
+  }catch{}
+  return {...CLOUD_DEFAULT};
+}
+function cloudUsingOverride(){return !!localStorage.getItem(CLOUD_CFG_KEY);}
+let CLOUD = loadCloudCfg();
 
 /* ═══════════════ CONSTANTS ═══════════════ */
 const MN=['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
@@ -822,6 +857,37 @@ async function cloudPut(env){
       'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
     body:JSON.stringify({id:CLOUD.rowId,data:env,updated_at:new Date().toISOString()})});
   if(!r.ok)throw new Error('cloud PUT '+r.status);
+}
+/* ── переподключение облака из UI (Настройки → Облако) ── */
+async function cloudTest(cfg){
+  try{
+    const r=await fetch(`${cfg.url}/rest/v1/${cfg.table}?select=id&limit=1`,
+      {headers:{apikey:cfg.anonKey,Authorization:'Bearer '+cfg.anonKey}});
+    if(r.ok)return {ok:true};
+    if(r.status===401||r.status===403)return {ok:false,msg:'ключ неверный или RLS закрыт (HTTP '+r.status+')'};
+    if(r.status===404)return {ok:false,msg:'нет таблицы budget — выполните SQL ниже (HTTP 404)'};
+    return {ok:false,msg:'HTTP '+r.status};
+  }catch(e){return {ok:false,msg:'хост недоступен — проверьте URL/что проект не на паузе'};}
+}
+function _csMsg(t,cls){const st=document.getElementById('cs-status');if(st){st.textContent=t;st.className='cs-msg'+(cls?' '+cls:'');}}
+async function cloudConnect(){
+  const url=(document.getElementById('cs-url').value||'').trim().replace(/\/+$/,'');
+  const key=(document.getElementById('cs-key').value||'').trim();
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)){_csMsg('URL вида https://xxxxx.supabase.co','err');return;}
+  if(!key){_csMsg('Вставьте публичный ключ (sb_publishable_…)','err');return;}
+  _csMsg('Проверяю связь…');
+  const cfg={...CLOUD_DEFAULT,url,anonKey:key};
+  const t=await cloudTest(cfg);
+  if(!t.ok){_csMsg('Не подключилось: '+t.msg,'err');return;}
+  localStorage.setItem(CLOUD_CFG_KEY,JSON.stringify({url,anonKey:key}));
+  CLOUD=loadCloudCfg();_cloudDown=false;
+  try{if(_dataKey)await persist();}catch{}        // зальём текущие зашифрованные данные в новое облако
+  _csMsg('Подключено ✓ данные залиты в это облако','ok');
+  toast('Облако подключено ✓','ok');rSet();
+}
+function cloudResetCfg(){
+  localStorage.removeItem(CLOUD_CFG_KEY);CLOUD=loadCloudCfg();_cloudDown=false;
+  _csMsg('Вернул встроенный адрес облака');toast('Вернул встроенный адрес облака');rSet();
 }
 
 /* ═══════════════ STORAGE ═══════════════ */
@@ -1514,10 +1580,13 @@ function rSet(){
   rCatEd('ed-sav',D.savCats,'sav');
   const cs=document.getElementById('cloud-state');
   if(cs)cs.innerHTML=!cloudOn()
-    ?'⚠️ Облако пока не подключено — данные только в этом браузере. Нужно настроить Supabase.'
+    ?'⚠️ Облако не настроено — данные только в этом браузере.'
     :_cloudDown
-      ?'⚠️ Облако настроено, но сейчас недоступно (проект Supabase на паузе?). Данные сохраняются локально и синхронизируются, как только облако вернётся.'
-      :'☁️ Облачная синхронизация включена — данные шифруются и хранятся в облаке.';
+      ?'⚠️ Облако недоступно (проект Supabase на паузе или удалён). Данные сохраняются локально и синхронизируются, как только облако вернётся. Если проект пропал — поднимите новый и подключите его ниже.'
+      :'☁️ Подключено: '+CLOUD.url.replace(/^https?:\/\//,'')+(cloudUsingOverride()?' (свой адрес)':'')+' — данные шифруются и синхронизируются автоматически.';
+  const csu=document.getElementById('cs-url'),csk=document.getElementById('cs-key');
+  if(csu&&document.activeElement!==csu)csu.value=CLOUD.url;
+  if(csk&&document.activeElement!==csk)csk.value=CLOUD.anonKey;
   const rs=document.getElementById('rec-status');
   if(rs)rs.textContent=_wrapRc?'код создан ✓':'нет кода';
 }
