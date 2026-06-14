@@ -566,7 +566,8 @@ select option{background:#fff;color:var(--text)}
         <button class="btn btn-gh" onclick="xprt()">📥 Скачать JSON (полный бэкап)</button>
         <button class="btn btn-gh" onclick="document.getElementById('imp-f').click()">📤 Загрузить JSON</button>
         <input type="file" id="imp-f" accept=".json" style="display:none">
-        <p style="font-size:11.5px;color:var(--text3);line-height:1.5">JSON-бэкап — дополнительная подстраховка независимо от облака: скачать копию данных можно когда угодно и загрузить обратно. Полезно сохранять копию раз в пару месяцев.</p>
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:12px;color:var(--text2);cursor:pointer"><input type="checkbox" id="st-autobk" onchange="localStorage.setItem(LSK+'_autobk',this.checked?'1':'0')" style="width:auto"> Скачивать бэкап-файл раз в день автоматически</label>
+        <p style="font-size:11.5px;color:var(--text3);line-height:1.5">JSON-бэкап — подстраховка независимо от облака: скачать/загрузить копию можно когда угодно. При входе раз в день делается тихий снимок в браузере, а с галочкой выше — ещё и файл на диск.</p>
       </div>
     </div>
     <div class="card ca">
@@ -862,23 +863,17 @@ async function cloudPut(env){
     body:JSON.stringify({id:CLOUD.rowId,data:env,updated_at:new Date().toISOString()})});
   if(!r.ok)throw new Error('cloud PUT '+r.status);
 }
-/* Берём самый СВЕЖИЙ конверт из облака/локального кэша (по полю updated).
-   Если облако недоступно — не падаем, отдаём локальный (cloudDown=true).
-   Свежий локальный конверт (офлайн-правки или смена пароля) НЕ перетираем
-   устаревшим облаком — иначе после офлайн-восстановления старый пароль из облака
-   снова заблокировал бы вход. */
-async function loadEnvelope(){
+/* Источник истины — ОБЛАКО (если доступно). Локальная копия — кэш и офлайн-буфер.
+   Локаль берёт верх ТОЛЬКО если в ней есть несинхронизированные офлайн-правки
+   (флаг dirty) — тогда мы не теряем правки, сделанные без сети. В остальных случаях
+   приоритет у облака, чтобы устаревшая локальная копия НЕ затёрла свежие данные. */
+function _localEnv(){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)return p;}catch{}}return null;}
+function _isDirty(){return localStorage.getItem(LSK+'_dirty')==='1';}
+function _setDirty(v){try{v?localStorage.setItem(LSK+'_dirty','1'):localStorage.removeItem(LSK+'_dirty');}catch{}}
+async function loadEnvelopes(){
   let cloudEnv=null,cloudDown=false;
   if(cloudOn()){try{cloudEnv=await cloudGet();}catch(e){cloudDown=true;}}
-  let localEnv=null;const lv=localStorage.getItem(LSK);
-  if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)localEnv=p;}catch{}}
-  let env=null,fromCloud=false;
-  if(cloudEnv&&localEnv){
-    const tc=Date.parse(cloudEnv.updated||'')||0,tl=Date.parse(localEnv.updated||'')||0;
-    if(tl>tc)env=localEnv; else {env=cloudEnv;fromCloud=true;}
-  }else if(cloudEnv){env=cloudEnv;fromCloud=true;}
-  else if(localEnv){env=localEnv;}
-  return {env,fromCloud,cloudDown};
+  return {cloudEnv,localEnv:_localEnv(),cloudDown};
 }
 /* ── переподключение облака из UI (Настройки → Облако) ── */
 async function cloudTest(cfg){
@@ -922,8 +917,8 @@ async function persist(){
     localStorage.setItem(LSK,JSON.stringify(env));        // локальный зашифрованный кэш — ВСЕГДА первым, данные не теряем
     if(cloudOn()){
       setSync(_cloudDown?'offline':'sync');
-      try{await cloudPut(env);_cloudDown=false;setSync('ok');}   // облако вернулось → синхронизировались
-      catch(e){_cloudDown=true;setSync('offline');}             // облако недоступно — но локально уже сохранили
+      try{await cloudPut(env);_cloudDown=false;_setDirty(false);setSync('ok');}   // облако вернулось → синхронизировались
+      catch(e){_cloudDown=true;_setDirty(true);setSync('offline');}              // правка не дошла до облака — пометим как несинхронизированную
     }else{setSync('ok');}
   }catch(e){setSync('err');toast('Ошибка сохранения: '+e.message,'err');}
 }
@@ -1598,6 +1593,7 @@ function rSet(){
   document.getElementById('st-v1').value=D.settings.vo1;
   document.getElementById('st-v2').value=D.settings.vo2;
   document.getElementById('st-round').value=D.settings.incRound||0;
+  const ab=document.getElementById('st-autobk');if(ab)ab.checked=localStorage.getItem(LSK+'_autobk')!=='0';
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
   const cs=document.getElementById('cloud-state');
@@ -1705,11 +1701,26 @@ function rCatEd(elId,cats,type){
 }
 
 /* ═══════════════ EXPORT/IMPORT ═══════════════ */
-function xprt(){
+function xprt(silent){
+  if(!D)return;
   const b=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
   a.download='bali_budget_'+new Date().toISOString().slice(0,10)+'.json';
-  a.click();toast('Файл скачан ✓');
+  a.click();if(!silent)toast('Файл скачан ✓');
+}
+/* Ежедневный бэкап для безопасности: тихий зашифрованный снимок в браузере (последние 14)
+   + копия-файл на диск раз в день. Не бэкапим заведомо устаревшие офлайн-данные. */
+function _pruneBk(){try{const ks=Object.keys(localStorage).filter(k=>k.indexOf(LSK+'_bk_')===0).sort();while(ks.length>14)localStorage.removeItem(ks.shift());}catch{}}
+function maybeDailyBackup(){
+  try{
+    if(_cloudDown)return;                                  // офлайн → данные могут быть устаревшими, не бэкапим
+    const today=new Date().toISOString().slice(0,10);
+    if(localStorage.getItem(LSK+'_bkdate')===today)return; // уже сегодня делали
+    localStorage.setItem(LSK+'_bkdate',today);
+    const env=localStorage.getItem(LSK);
+    if(env){try{localStorage.setItem(LSK+'_bk_'+today,env);_pruneBk();}catch{}}  // снимок в браузере
+    if(localStorage.getItem(LSK+'_autobk')!=='0'&&D)xprt(true);                   // копия на диск (можно выключить в Настройках)
+  }catch{}
 }
 
 /* ═══════════════ BIND ALL BUTTONS ═══════════════ */
@@ -1814,34 +1825,41 @@ function initAuth(){
     _loginEmail=em;
     err.textContent='Загрузка…';
     try{
-      // берём самый свежий конверт из облака/локального кэша. Облако недоступно — НЕ
-      // блокируем вход (грузим локальную копию). Свежий локальный конверт не перетираем
-      // устаревшим облаком (см. loadEnvelope).
-      const _pick=await loadEnvelope();
-      let env=_pick.env,fromCloud=_pick.fromCloud;_cloudDown=_pick.cloudDown;
-      // облако недоступно И на этом устройстве нет сохранённой копии — НЕ создаём пустые данные,
-      // иначе при возврате облака пустышка может затереть настоящие данные
-      if(!env&&_cloudDown){
-        err.innerHTML='Облако недоступно, и на этом устройстве нет сохранённой копии.<br>Восстановите проект Supabase в дашборде, либо войдите с устройства, где вы уже открывали бюджет.';
-        return;
-      }
-      if(env&&env.v===2){
-        let dek;try{dek=await unwrapDEK(env.wrapPw,pw);}catch{err.textContent='Неверный пароль';return;}
-        _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapPw=env.wrapPw;_wrapRc=env.wrapRc||null;
-        D=mergeDefaults(await decWithDataKey(env));
-        if(cloudOn()&&!fromCloud&&!_cloudDown)await persist();   // засеять облако из локального кэша (только если облако живо)
-      }else if(env){
-        // старый конверт v1 → расшифровать паролем и апгрейднуть до v2 (с DEK)
-        let dec;try{dec=await decV1(env,pw);}catch{err.textContent='Неверный пароль';return;}
-        D=mergeDefaults(dec);await initDEK(pw);await persist();
-      }else{
+      // ОБЛАКО — авторитетный источник данных, если доступно. Локаль берёт верх лишь когда
+      // в ней есть несинхронизированные офлайн-правки (флаг dirty). Это не даёт устаревшей
+      // локальной копии затереть более свежие данные в облаке.
+      const {cloudEnv,localEnv,cloudDown}=await loadEnvelopes();_cloudDown=cloudDown;
+      const dirty=_isDirty();
+      const env=(dirty&&localEnv)?localEnv:(cloudEnv||localEnv);
+      if(!env){
+        if(cloudDown){err.innerHTML='Облако недоступно, и на этом устройстве нет сохранённой копии.<br>Восстановите проект Supabase в дашборде, либо войдите с устройства, где вы уже открывали бюджет.';return;}
         // первый запуск — этот пароль становится мастер-паролем
         let legacy=null;const lv=localStorage.getItem(LSK);
         if(lv){try{const p=JSON.parse(lv);if(p&&!p.ct)legacy=p;}catch{}}   // миграция незашифрованных данных
         D=mergeDefaults(legacy||defData());await initDEK(pw);await persist();
+        hideGate();bootData();maybeDailyBackup();return;
       }
-      hideGate();bootData();
-      if(_cloudDown){setSync('offline');toast('Облако недоступно — работаем с локальной копией. Изменения сохраняются здесь и уйдут в облако, когда оно вернётся.','warn');}
+      if(env.v===2){
+        let dek;try{dek=await unwrapDEK(env.wrapPw,pw);}catch{err.textContent='Неверный пароль';return;}
+        _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapPw=env.wrapPw;_wrapRc=env.wrapRc||null;
+        D=mergeDefaults(await decWithDataKey(env));
+        if(cloudOn()&&!cloudDown){
+          if(env===localEnv){
+            // локаль авторитетна (офлайн-правки или засев пустого облака) → льём в облако.
+            // если в облаке была ДРУГАЯ версия — сначала отложим её в резерв, чтобы не потерять
+            if(cloudEnv&&JSON.stringify(cloudEnv)!==JSON.stringify(localEnv)){try{localStorage.setItem(LSK+'_cloud_backup',JSON.stringify(cloudEnv));}catch{}}
+            await persist();
+          }else{
+            localStorage.setItem(LSK,JSON.stringify(env));_setDirty(false);   // взяли свежее облако → освежим локальный кэш
+          }
+        }
+      }else{
+        // старый конверт v1 → расшифровать паролем и апгрейднуть до v2 (с DEK)
+        let dec;try{dec=await decV1(env,pw);}catch{err.textContent='Неверный пароль';return;}
+        D=mergeDefaults(dec);await initDEK(pw);await persist();
+      }
+      hideGate();bootData();maybeDailyBackup();
+      if(cloudDown){setSync('offline');toast('Облако недоступно — работаем с локальной копией. Не вносите важные правки до возврата облака, иначе они могут разойтись.','warn');}
     }catch(e){err.textContent='Ошибка: '+e.message;}
   };
   document.getElementById('pw-go').onclick=go;
@@ -1861,9 +1879,10 @@ function initAuth(){
     if(n1!==n2){err.textContent='Пароли не совпадают';return;}
     err.textContent='Проверка кода…';
     try{
-      // как и во входе: облако недоступно — НЕ блокируем, восстанавливаем по локальной копии
-      const _pick=await loadEnvelope();let env=_pick.env;_cloudDown=_pick.cloudDown;
-      if(!env&&_cloudDown){err.innerHTML='Облако недоступно, и на этом устройстве нет сохранённой копии.<br>Восстановите проект Supabase, либо откройте устройство, где вы уже входили в бюджет.';return;}
+      // как и во входе: облако — главный источник; если недоступно — по локальной копии
+      const {cloudEnv,localEnv,cloudDown}=await loadEnvelopes();_cloudDown=cloudDown;
+      const env=(_isDirty()&&localEnv)?localEnv:(cloudEnv||localEnv);
+      if(!env&&cloudDown){err.innerHTML='Облако недоступно, и на этом устройстве нет сохранённой копии.<br>Восстановите проект Supabase, либо откройте устройство, где вы уже входили в бюджет.';return;}
       if(!env||env.v!==2||!env.wrapRc){err.textContent='Для этого аккаунта код восстановления не настроен (на этом устройстве)';return;}
       let dek;try{dek=await unwrapDEK(env.wrapRc,code);}catch{err.textContent='Неверный код восстановления';return;}
       _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapRc=env.wrapRc;
