@@ -59,6 +59,7 @@ body{font-family:'Manrope',-apple-system,sans-serif;background:var(--bg);color:v
 .hchip b{color:var(--text);font-weight:700}.hchip.g b{color:var(--green)}.hchip.a b{color:var(--text)}
 .sync{font-size:10px;padding:4px 9px;border-radius:11px;font-weight:600;flex-shrink:0}
 .sync.ok{background:rgba(31,157,107,.1);color:var(--green)}
+.sync.off{background:rgba(207,133,0,.12);color:var(--amber)}
 .sync.err{background:rgba(224,96,58,.1);color:var(--red)}
 .hbtn{padding:5px 12px;border-radius:8px;border:1px solid var(--brd2);background:#fff;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
 .hbtn:hover{border-color:var(--acc);color:var(--acc)}
@@ -252,6 +253,7 @@ select option{background:#fff;color:var(--text)}
 /* TOAST */
 .toast{position:fixed;bottom:18px;right:18px;border-radius:10px;padding:10px 16px;font-size:12.5px;font-weight:600;z-index:300;transform:translateY(80px);transition:transform .25s;pointer-events:none;border:1px solid;box-shadow:0 6px 20px rgba(22,24,18,.1)}
 .toast.ok{background:#fff;border-color:rgba(31,157,107,.3);color:var(--green)}
+.toast.warn{background:#fff;border-color:rgba(207,133,0,.35);color:var(--amber3)}
 .toast.err{background:#fff;border-color:rgba(224,96,58,.3);color:var(--red)}
 .toast.show{transform:translateY(0)}
 
@@ -755,6 +757,7 @@ function defData(){
 let D=null, _ch={};
 let distSn=[], distVo=[];
 let incCcy='IDR';   // валюта отображения сводной таблицы доходов: 'IDR' | 'USD'
+let _cloudDown=false;   // облако настроено, но сейчас недоступно → работаем офлайн от локальной копии
 
 /* ═══════════════ CRYPTO (end-to-end шифрование) ═══════════════
    Данные шифрует случайный «ключ данных» (DEK). Сам DEK хранится
@@ -828,9 +831,12 @@ async function persist(){
   try{
     if(!_dataKey){localStorage.setItem(LSK,JSON.stringify(D));setSync('ok');return;}
     const env=await encEnvelope(D);
-    localStorage.setItem(LSK,JSON.stringify(env));        // локальный зашифрованный кэш
-    if(cloudOn()){setSync('sync');await cloudPut(env);}
-    setSync('ok');
+    localStorage.setItem(LSK,JSON.stringify(env));        // локальный зашифрованный кэш — ВСЕГДА первым, данные не теряем
+    if(cloudOn()){
+      setSync(_cloudDown?'offline':'sync');
+      try{await cloudPut(env);_cloudDown=false;setSync('ok');}   // облако вернулось → синхронизировались
+      catch(e){_cloudDown=true;setSync('offline');}             // облако недоступно — но локально уже сохранили
+    }else{setSync('ok');}
   }catch(e){setSync('err');toast('Ошибка сохранения: '+e.message,'err');}
 }
 function lsSave(){persist();}
@@ -838,8 +844,11 @@ let _saveT=null;
 function autoSave(){clearTimeout(_saveT);_saveT=setTimeout(persist,450);}
 function setSync(s){
   const el=document.getElementById('h-sync');if(!el)return;
-  el.className='sync '+(s==='ok'?'ok':s==='sync'?'':'err');
-  el.textContent=s==='ok'?(cloudOn()?'● в облаке':'● сохранено'):s==='sync'?'⟳ синхронизация…':'✕ ошибка';
+  el.className='sync '+(s==='ok'?'ok':s==='sync'?'':s==='offline'?'off':'err');
+  el.textContent=s==='ok'?(cloudOn()?'● в облаке':'● сохранено')
+    :s==='sync'?'⟳ синхронизация…'
+    :s==='offline'?'☁︎ офлайн · сохранено'
+    :'✕ ошибка';
 }
 
 /* ═══════════════ COMPUTED ═══════════════ */
@@ -907,8 +916,8 @@ function fN(n,d=1){if(n===null||n===undefined||isNaN(n))return'—';return+n.toF
 /* ═══════════════ TOAST ═══════════════ */
 function toast(msg,t='ok'){
   const el=document.getElementById('toast');
-  el.className='toast '+(t==='err'?'err':'ok')+' show';
-  el.textContent=msg;setTimeout(()=>el.classList.remove('show'),2800);
+  el.className='toast '+(t==='err'?'err':t==='warn'?'warn':'ok')+' show';
+  el.textContent=msg;setTimeout(()=>el.classList.remove('show'),t==='warn'?4200:2800);
 }
 
 /* ═══════════════ MODAL ═══════════════ */
@@ -1504,9 +1513,11 @@ function rSet(){
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
   const cs=document.getElementById('cloud-state');
-  if(cs)cs.innerHTML=cloudOn()
-    ?'☁️ Облачная синхронизация включена — данные шифруются и хранятся в облаке.'
-    :'⚠️ Облако пока не подключено — данные только в этом браузере. Нужно настроить Supabase.';
+  if(cs)cs.innerHTML=!cloudOn()
+    ?'⚠️ Облако пока не подключено — данные только в этом браузере. Нужно настроить Supabase.'
+    :_cloudDown
+      ?'⚠️ Облако настроено, но сейчас недоступно (проект Supabase на паузе?). Данные сохраняются локально и синхронизируются, как только облако вернётся.'
+      :'☁️ Облачная синхронизация включена — данные шифруются и хранятся в облаке.';
   const rs=document.getElementById('rec-status');
   if(rs)rs.textContent=_wrapRc?'код создан ✓':'нет кода';
 }
@@ -1712,15 +1723,26 @@ function initAuth(){
     _loginEmail=em;
     err.textContent='Загрузка…';
     try{
-      // ищем существующий зашифрованный конверт: сначала облако, потом локальный кэш
-      let env=null,fromCloud=false;
-      if(cloudOn()){try{env=await cloudGet();if(env)fromCloud=true;}catch(e){err.textContent='Нет связи с облаком. Проверьте интернет.';return;}}
+      // ищем существующий зашифрованный конверт: сначала облако, потом локальный кэш.
+      // ВАЖНО: если облако недоступно — НЕ блокируем вход, а пробуем локальную копию,
+      // чтобы падение облака не запирало снаружи и не приводило к потере доступа к данным.
+      let env=null,fromCloud=false;_cloudDown=false;
+      if(cloudOn()){
+        try{env=await cloudGet();if(env)fromCloud=true;}
+        catch(e){_cloudDown=true;}
+      }
       if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)env=p;}catch{}}}
+      // облако недоступно И на этом устройстве нет сохранённой копии — НЕ создаём пустые данные,
+      // иначе при возврате облака пустышка может затереть настоящие данные
+      if(!env&&_cloudDown){
+        err.innerHTML='Облако недоступно, и на этом устройстве нет сохранённой копии.<br>Восстановите проект Supabase в дашборде, либо войдите с устройства, где вы уже открывали бюджет.';
+        return;
+      }
       if(env&&env.v===2){
         let dek;try{dek=await unwrapDEK(env.wrapPw,pw);}catch{err.textContent='Неверный пароль';return;}
         _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapPw=env.wrapPw;_wrapRc=env.wrapRc||null;
         D=mergeDefaults(await decWithDataKey(env));
-        if(cloudOn()&&!fromCloud)await persist();   // засеять облако из локального кэша
+        if(cloudOn()&&!fromCloud&&!_cloudDown)await persist();   // засеять облако из локального кэша (только если облако живо)
       }else if(env){
         // старый конверт v1 → расшифровать паролем и апгрейднуть до v2 (с DEK)
         let dec;try{dec=await decV1(env,pw);}catch{err.textContent='Неверный пароль';return;}
@@ -1732,6 +1754,7 @@ function initAuth(){
         D=mergeDefaults(legacy||defData());await initDEK(pw);await persist();
       }
       hideGate();bootData();
+      if(_cloudDown){setSync('offline');toast('Облако недоступно — работаем с локальной копией. Изменения сохраняются здесь и уйдут в облако, когда оно вернётся.','warn');}
     }catch(e){err.textContent='Ошибка: '+e.message;}
   };
   document.getElementById('pw-go').onclick=go;
