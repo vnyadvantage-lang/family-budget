@@ -862,6 +862,24 @@ async function cloudPut(env){
     body:JSON.stringify({id:CLOUD.rowId,data:env,updated_at:new Date().toISOString()})});
   if(!r.ok)throw new Error('cloud PUT '+r.status);
 }
+/* Берём самый СВЕЖИЙ конверт из облака/локального кэша (по полю updated).
+   Если облако недоступно — не падаем, отдаём локальный (cloudDown=true).
+   Свежий локальный конверт (офлайн-правки или смена пароля) НЕ перетираем
+   устаревшим облаком — иначе после офлайн-восстановления старый пароль из облака
+   снова заблокировал бы вход. */
+async function loadEnvelope(){
+  let cloudEnv=null,cloudDown=false;
+  if(cloudOn()){try{cloudEnv=await cloudGet();}catch(e){cloudDown=true;}}
+  let localEnv=null;const lv=localStorage.getItem(LSK);
+  if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)localEnv=p;}catch{}}
+  let env=null,fromCloud=false;
+  if(cloudEnv&&localEnv){
+    const tc=Date.parse(cloudEnv.updated||'')||0,tl=Date.parse(localEnv.updated||'')||0;
+    if(tl>tc)env=localEnv; else {env=cloudEnv;fromCloud=true;}
+  }else if(cloudEnv){env=cloudEnv;fromCloud=true;}
+  else if(localEnv){env=localEnv;}
+  return {env,fromCloud,cloudDown};
+}
 /* ── переподключение облака из UI (Настройки → Облако) ── */
 async function cloudTest(cfg){
   try{
@@ -1796,15 +1814,11 @@ function initAuth(){
     _loginEmail=em;
     err.textContent='Загрузка…';
     try{
-      // ищем существующий зашифрованный конверт: сначала облако, потом локальный кэш.
-      // ВАЖНО: если облако недоступно — НЕ блокируем вход, а пробуем локальную копию,
-      // чтобы падение облака не запирало снаружи и не приводило к потере доступа к данным.
-      let env=null,fromCloud=false;_cloudDown=false;
-      if(cloudOn()){
-        try{env=await cloudGet();if(env)fromCloud=true;}
-        catch(e){_cloudDown=true;}
-      }
-      if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)env=p;}catch{}}}
+      // берём самый свежий конверт из облака/локального кэша. Облако недоступно — НЕ
+      // блокируем вход (грузим локальную копию). Свежий локальный конверт не перетираем
+      // устаревшим облаком (см. loadEnvelope).
+      const _pick=await loadEnvelope();
+      let env=_pick.env,fromCloud=_pick.fromCloud;_cloudDown=_pick.cloudDown;
       // облако недоступно И на этом устройстве нет сохранённой копии — НЕ создаём пустые данные,
       // иначе при возврате облака пустышка может затереть настоящие данные
       if(!env&&_cloudDown){
@@ -1847,10 +1861,10 @@ function initAuth(){
     if(n1!==n2){err.textContent='Пароли не совпадают';return;}
     err.textContent='Проверка кода…';
     try{
-      let env=null;
-      if(cloudOn()){try{env=await cloudGet();}catch(e){err.textContent='Нет связи с облаком.';return;}}
-      if(!env){const lv=localStorage.getItem(LSK);if(lv){try{const p=JSON.parse(lv);if(p&&p.ct)env=p;}catch{}}}
-      if(!env||env.v!==2||!env.wrapRc){err.textContent='Для этого аккаунта код восстановления не настроен';return;}
+      // как и во входе: облако недоступно — НЕ блокируем, восстанавливаем по локальной копии
+      const _pick=await loadEnvelope();let env=_pick.env;_cloudDown=_pick.cloudDown;
+      if(!env&&_cloudDown){err.innerHTML='Облако недоступно, и на этом устройстве нет сохранённой копии.<br>Восстановите проект Supabase, либо откройте устройство, где вы уже входили в бюджет.';return;}
+      if(!env||env.v!==2||!env.wrapRc){err.textContent='Для этого аккаунта код восстановления не настроен (на этом устройстве)';return;}
       let dek;try{dek=await unwrapDEK(env.wrapRc,code);}catch{err.textContent='Неверный код восстановления';return;}
       _dekRaw=dek;_dataKey=await importDataKey(_dekRaw);_wrapRc=env.wrapRc;
       D=mergeDefaults(await decWithDataKey(env));
@@ -1858,7 +1872,8 @@ function initAuth(){
       await persist();
       recBox.style.display='none';pwBox.style.display='flex';
       hideGate();bootData();
-      toast('Доступ восстановлен ✓ Пароль обновлён');
+      if(_cloudDown){setSync('offline');toast('Доступ восстановлен ✓ Новый пароль сохранён локально — уйдёт в облако, когда оно вернётся.','warn');}
+      else toast('Доступ восстановлен ✓ Пароль обновлён');
     }catch(e){err.textContent='Ошибка: '+e.message;}
   };
   document.getElementById('rec-go').onclick=recGo;
