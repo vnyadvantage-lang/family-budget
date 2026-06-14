@@ -720,7 +720,11 @@ const CLOUD_DEFAULT = {
   table:   'budget',
   rowId:   'main',
 };
-const CLOUD_CFG_KEY='cloud_cfg_v1';
+/* Ключи localStorage — ИМЕННЫЕ для этого приложения. ВАЖНО: бюджет и «Финансы
+   компании» хостятся на одном домене vnyadvantage-lang.github.io, а localStorage
+   общий на весь домен. Поэтому ключи ДОЛЖНЫ быть уникальными для каждого приложения,
+   иначе данные двух проектов перепутаются. Бюджет: bali_v5 + cloud_cfg_budget_v1. */
+const CLOUD_CFG_KEY='cloud_cfg_budget_v1';
 function loadCloudCfg(){
   try{const o=JSON.parse(localStorage.getItem(CLOUD_CFG_KEY)||'null');
     if(o&&o.url&&o.anonKey)return {...CLOUD_DEFAULT,url:String(o.url).trim().replace(/\/+$/,''),anonKey:String(o.anonKey).trim()};
