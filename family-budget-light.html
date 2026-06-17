@@ -198,8 +198,10 @@ select option{background:#fff;color:var(--text)}
 .acc-mv{width:27px;height:25px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--brd);border-radius:6px;font-size:11px;color:var(--text2);cursor:pointer;font-family:inherit;padding:0;transition:all .15s}
 .acc-mv:hover:not(:disabled){background:var(--acc);color:#fff;border-color:var(--acc)}
 .acc-mv:disabled{opacity:.3;cursor:default}
-.acc-hint{font-size:11.5px;color:var(--text2);background:var(--bg3);border:1px solid var(--brd);border-radius:9px;padding:7px 11px;margin-bottom:1rem}
+.acc-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+.acc-hint{font-size:11.5px;color:var(--text2)}
 .acc-hint b{color:var(--text);font-weight:700}
+.acc-card.reordering{border-style:dashed;border-color:var(--brd3)}
 .acc-add{background:transparent;border:1px dashed var(--brd2);border-radius:var(--r3);padding:1rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;min-height:130px;transition:all .15s}
 .acc-add:hover{border-color:var(--acc);background:rgba(63,122,209,.03)}
 .acc-add span{font-size:12px;color:var(--text2);font-weight:600}
@@ -751,7 +753,10 @@ select option{background:#fff;color:var(--text)}
 <!-- ACCOUNTS -->
 <div id="pg-accounts" class="pg">
   <div class="acc-totals" id="acc-totals"></div>
-  <div class="acc-hint">↔ Порядок счетов можно менять: перетащите карточку мышью или используйте кнопки <b>◀ ▶</b> на ней.</div>
+  <div class="acc-bar">
+    <button class="btn btn-gh btn-sm" id="acc-reorder-btn" onclick="toggleAccReorder()">↔ Изменить порядок</button>
+    <span class="acc-hint" id="acc-hint" style="display:none">Перетащите карточку мышью или используйте <b>◀ ▶</b> на ней, затем нажмите «Готово».</span>
+  </div>
   <div class="acc-grid" id="acc-grid"></div>
   <div class="card ct">
     <div class="ctitle"><span class="l"><span class="dot t"></span>Распределение по валютам</span></div>
@@ -2014,25 +2019,28 @@ function rAccTotals(){
 
 function rAcc(){
   rAccTotals();
+  const ro=_accReorder;
+  const rb=document.getElementById('acc-reorder-btn');
+  if(rb){rb.textContent=ro?'✓ Готово':'↔ Изменить порядок';rb.classList.toggle('btn-pr',ro);rb.classList.toggle('btn-gh',!ro);}
+  const hint=document.getElementById('acc-hint');if(hint)hint.style.display=ro?'':'none';
   const grid=document.getElementById('acc-grid');
   const last=D.accounts.length-1;
   grid.innerHTML=D.accounts.map((a,i)=>{
     const idrActual=toIdr(a.bal,a.ccy);
     const sym=CSYM[a.ccy]||'';
-    return`<div class="acc-card ${a.own==='sn'?'sn':a.own==='vo'?'vo':'jt'}" draggable="true" data-id="${a.id}"
-      ondragstart="accDragStart(event,${a.id})" ondragover="accDragOver(event)" ondragleave="accDragLeave(event)" ondrop="accDrop(event,${a.id})" ondragend="accDragEnd(event)">
+    const dnd=ro?` draggable="true" ondragstart="accDragStart(event,${a.id})" ondragover="accDragOver(event)" ondragleave="accDragLeave(event)" ondrop="accDrop(event,${a.id})" ondragend="accDragEnd(event)"`:'';
+    return`<div class="acc-card ${a.own==='sn'?'sn':a.own==='vo'?'vo':'jt'}${ro?' reordering':''}" data-id="${a.id}"${dnd}>
       <div class="acc-own">${OL[a.own]||a.own}</div>
       <div class="acc-name">${escapeHtml(a.name)}</div>
       <div class="acc-bank">${escapeHtml(a.bank)}</div>
       <div class="acc-bal">${sym}${a.bal.toLocaleString('ru')}</div>
       <div class="acc-idr">${fRpA(idrActual)} · ${fUsdA(idrActual)}</div>
-      <button class="acc-ebtn" onclick="openEditAcc(${a.id})">✎ изменить</button>
-      <div class="acc-move">
+      ${ro?`<div class="acc-move">
         <button class="acc-mv" onclick="reorderAcc(${a.id},-1)" ${i===0?'disabled':''} aria-label="Переместить левее" title="Левее">◀</button>
         <button class="acc-mv" onclick="reorderAcc(${a.id},1)" ${i===last?'disabled':''} aria-label="Переместить правее" title="Правее">▶</button>
-      </div>
+      </div>`:`<button class="acc-ebtn" onclick="openEditAcc(${a.id})">✎ изменить</button>`}
     </div>`;}).join('')+
-    `<div class="acc-add" onclick="openAddAcc()"><div style="font-size:22px;color:var(--text3)">＋</div><span>Добавить счёт</span></div>`;
+    (ro?'':`<div class="acc-add" onclick="openAddAcc()"><div style="font-size:22px;color:var(--text3)">＋</div><span>Добавить счёт</span></div>`);
 
   const{totIdr,byCcy}=calcAccTotals();
   const CCOLS={IDR:CC.g,USD:CC.b,THB:CC.pk,UAH:CC.a,USDT:CC.t,BTC:'#e0890a',ETH:CC.p2};
@@ -2088,7 +2096,10 @@ function delAcc(){
   lsSave();cm('m-acc');rAcc();upHdr();toast('Счёт удалён');
 }
 /* Порядок счетов — для удобства пользователя. Порядок = порядок в массиве D.accounts.
-   Десктоп: перетаскивание карточек (HTML5 DnD). Везде (вкл. телефон): кнопки ◀ ▶. */
+   Перестановка доступна ТОЛЬКО в режиме «Изменить порядок» (_accReorder), чтобы не таскать
+   карточки случайно. В режиме: десктоп — перетаскивание (HTML5 DnD); везде — кнопки ◀ ▶. */
+let _accReorder=false;
+function toggleAccReorder(){_accReorder=!_accReorder;accDragEnd();rAcc();}
 function reorderAcc(id,dir){
   const i=D.accounts.findIndex(a=>a.id===id);if(i<0)return;
   const j=i+dir;if(j<0||j>=D.accounts.length)return;
