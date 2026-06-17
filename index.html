@@ -122,6 +122,13 @@ body{font-family:'Manrope',-apple-system,sans-serif;background:var(--bg);color:v
 .kpct.pos{background:rgba(31,157,107,.12);color:var(--green)}
 .kpct.neg{background:rgba(224,96,58,.12);color:var(--red)}
 .kpct.neu{background:rgba(63,122,209,.12);color:var(--acc2)}
+.kpct.closed{background:var(--bg5);color:var(--text2)}
+.kpi.kpi-closed{opacity:.62}
+.kpi.kpi-closed .kl{text-decoration:line-through}
+.prog.is-closed{opacity:.6}.prog.is-closed .prog-name{text-decoration:line-through}
+.prog-tag{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;vertical-align:middle}
+.prog-tag.closed{background:var(--bg5);color:var(--text2)}
+.prog-tag.done{background:rgba(31,157,107,.14);color:var(--green)}
 
 /* BAR ROW */
 .br{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--brd)}
@@ -132,6 +139,12 @@ body{font-family:'Manrope',-apple-system,sans-serif;background:var(--bg);color:v
 .br-pct{font-size:12px;min-width:40px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
 .br-rp{font-size:11.5px;min-width:100px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--text2)}
 .br-usd{font-size:11px;min-width:72px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--text3)}
+.br.br-total{border-bottom:none;border-top:2px solid var(--brd2);margin-top:3px;padding-top:11px}
+.br.br-total .br-track{background:transparent}
+.br.br-total .br-lbl{color:var(--text);font-weight:800;font-size:13px}
+.br.br-total .br-pct{color:var(--text)}
+.br.br-total .br-rp{color:var(--text);font-weight:700;font-size:12.5px}
+.br.br-total .br-usd{color:var(--text2);font-weight:700;font-size:12px}
 
 /* FORMS */
 .lbl{font-size:10px;color:var(--text3);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;font-weight:600}
@@ -189,6 +202,34 @@ select option{background:#fff;color:var(--text)}
 .acc-tot-lbl{font-size:11px;color:var(--text2);font-weight:600;margin-bottom:5px}
 .acc-tot-val{font-size:19px;font-weight:800;font-family:'Manrope',sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.4px;text-align:right;flex-shrink:0}
 .acc-tot-sub{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+
+/* SAVINGS SUB-NAV */
+.subnav{display:flex;gap:6px;background:var(--bg3);border:1px solid var(--brd);border-radius:12px;padding:4px;margin-bottom:1.2rem;width:fit-content;max-width:100%;flex-wrap:wrap}
+.subtab{flex:0 0 auto;padding:7px 16px;border:none;border-radius:8px;background:transparent;color:var(--text2);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.subtab:hover{color:var(--text)}
+.subtab.act{background:#fff;color:var(--indigo);box-shadow:var(--sh)}
+/* POTS — реальный остаток (конверты) */
+.pots-empty{padding:1.5rem;text-align:center;color:var(--text2);font-size:13px;background:var(--bg3);border:1px dashed var(--brd2);border-radius:12px}
+.pot-goal{margin-bottom:1.1rem}
+.pot-goal.is-closed{opacity:.62}
+.pot-goal-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0 8px 12px;flex-wrap:wrap}
+.pot-goal-name{font-size:13.5px;font-weight:700;color:var(--text)}
+.pot-goal-tot{text-align:right;font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+.pot-goal-tot b{color:var(--text);font-weight:700;display:block}
+.pot-goal-conv{font-size:11px;color:var(--text3)}
+.pot-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--brd);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s;background:#fff}
+.pot-row:hover{border-color:var(--brd2);background:var(--bg3)}
+.pot-acc{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12.5px;color:var(--text);font-weight:600;min-width:0}
+.pot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pot-note{font-size:11px;color:var(--text3);font-weight:500}
+.pot-amt{text-align:right;font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.pot-conv{display:block;font-size:11px;color:var(--text2);font-weight:500}
+.pot-warn{font-size:10px;font-weight:700;color:var(--amber3);background:rgba(207,133,0,.12);padding:1px 6px;border-radius:6px}
+.pot-grand{margin-top:1.2rem;padding-top:1.1rem;border-top:1px solid var(--brd)}
+.pot-grand-cards{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.pot-overwarn{font-size:12px;color:var(--red);background:rgba(224,96,58,.08);border:1px solid rgba(224,96,58,.2);border-radius:9px;padding:9px 11px;margin-bottom:1rem;font-weight:600}
+.pot-ccyhint{font-size:11px;color:var(--text2);margin-top:5px;font-weight:600}
+.pot-spend{margin-left:8px;vertical-align:middle;white-space:nowrap}
 
 /* UNIFIED TOTALS ROW */
 .tot-row{display:flex;gap:2.2rem;flex-wrap:wrap}
@@ -249,6 +290,30 @@ select option{background:#fff;color:var(--text)}
 .cat-ed-row{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--brd)}
 .cat-ed-row:last-child{border:none}
 .cat-swatch{width:13px;height:13px;border-radius:4px;flex-shrink:0}
+.ce-color{width:26px;height:26px;min-width:26px;padding:0;border:1px solid var(--brd2);border-radius:7px;flex:none;cursor:pointer;background:none;overflow:hidden}
+.ce-color::-webkit-color-swatch-wrapper{padding:0}
+.ce-color::-webkit-color-swatch{border:none;border-radius:6px}
+.ce-color::-moz-color-swatch{border:none;border-radius:6px}
+/* SAVINGS GOAL EDITOR */
+.sav-ed-row{display:flex;flex-direction:column;gap:7px;padding:9px 0;border-bottom:1px solid var(--brd)}
+.sav-ed-row:last-child{border:none}
+.sav-ed-top{display:flex;align-items:center;gap:7px}
+.sav-ed-bot{display:flex;align-items:center;gap:8px;padding-left:20px;flex-wrap:wrap}
+.sav-ed-bot label{font-size:11px;color:var(--text2);font-weight:600;white-space:nowrap}
+.ce-tgt{width:80px;flex:none;text-align:right;font-variant-numeric:tabular-nums}
+.ce-stat{font-size:10px;font-weight:700;padding:3px 9px;border-radius:8px;white-space:nowrap}
+.ce-stat.done{background:rgba(31,157,107,.12);color:var(--green)}
+.ce-stat.prog{background:rgba(63,122,209,.1);color:var(--acc2)}
+.ce-stat.closed{background:var(--bg5);color:var(--text2)}
+.ce-close{padding:5px 10px;font-size:11px;border-radius:7px;font-weight:600;font-family:inherit;cursor:pointer;border:1px solid;white-space:nowrap;transition:all .15s}
+.ce-close.do{background:rgba(31,157,107,.09);color:var(--green);border-color:rgba(31,157,107,.25)}
+.ce-close.do:hover{background:var(--green);color:#fff}
+.ce-close.re{background:var(--bg3);color:var(--text2);border-color:var(--brd2)}
+.ce-close.re:hover{border-color:var(--acc);color:var(--acc)}
+.sav-ed-row.is-closed .ce-n{text-decoration:line-through;color:var(--text2)}
+.sav-ed-row.is-closed .cat-swatch{opacity:.4}
+.sav-auto{display:flex;align-items:center;gap:.5rem;font-size:12px;color:var(--text2);cursor:pointer;margin-top:.7rem;font-weight:600}
+.sav-auto input{width:auto}
 
 /* TOAST */
 .toast{position:fixed;bottom:18px;right:18px;border-radius:10px;padding:10px 16px;font-size:12.5px;font-weight:600;z-index:300;transform:translateY(80px);transition:transform .25s;pointer-events:none;border:1px solid;box-shadow:0 6px 20px rgba(22,24,18,.1)}
@@ -288,6 +353,111 @@ select option{background:#fff;color:var(--text)}
 .tbl td.wn{color:var(--amber)!important}
 .tbl th.cm,.tbl td.cm{background:rgba(31,157,107,.06)!important;border-color:rgba(31,157,107,.18)!important}
 .tbl th.cm{color:var(--green)!important}
+
+/* ============================================================
+   МОБИЛЬНАЯ АДАПТАЦИЯ — добавочно, поверх десктопа (десктоп >820px не меняется).
+   ============================================================ */
+@media(max-width:820px){
+  .hdr-in{padding:.7rem 1.1rem;gap:.5rem}
+  .nav{padding:.45rem 1.1rem}
+  .pg{padding:1.2rem 1.1rem}
+  .card{padding:1.2rem 1.15rem}
+  .nbtn{padding:.6rem .9rem;font-size:13px}
+  /* Доходы: заморозить первый столбец сводной таблицы при горизонт. скролле */
+  .tbl th:first-child,.tbl td:first-child{position:sticky;left:0;z-index:2;box-shadow:1px 0 0 var(--brd)}
+  .tbl td:first-child{background:#fff}
+  .tbl th:first-child{background:var(--bg3);z-index:3}
+  .tbl .tsec td:first-child{background:var(--bg3)!important}
+  .tbl .ttot td:first-child{background:var(--card3)!important}
+  .tbl tr:hover td:first-child{background:var(--bg3)}
+  /* План/Факт: ужать столбец категории */
+  .pf-hdr,.pf-row{grid-template-columns:120px 1fr 1fr 62px 50px;gap:5px}
+}
+@media(max-width:560px){
+  body{font-size:14px}
+  .pg{padding:1rem .85rem}
+  .card{padding:1.1rem .95rem;border-radius:14px}
+  .mb2{margin-bottom:1rem}
+  /* анти-зум iOS Safari: контролы >=16px */
+  input,select,textarea{font-size:16px}
+  /* ── ШАПКА ── */
+  .hdr-in{padding:.6rem .85rem;gap:.45rem .5rem}
+  .logo{margin-right:auto;gap:8px}
+  .logo-ico{width:30px;height:30px;font-size:15px}
+  .logo h1{font-size:13px}.logo p{font-size:10px}
+  .sync{order:2;margin-left:auto}
+  .hchip{order:5;flex:1 1 auto;font-size:12px;padding:5px 11px;text-align:center}
+  .hbtn{order:6;flex:1 1 auto;min-height:40px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;padding:0 12px}
+  /* ── НАВИГАЦИЯ ── шапка переносится и становится выше, поэтому жёсткий top:51px ломает
+     прилипание — на телефоне пускаем нав статически прямо под шапкой */
+  .nav-wrap{position:static;top:auto}
+  .nav{padding:.4rem .85rem;gap:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}
+  .nbtn{padding:.6rem .85rem;font-size:13px;min-height:40px;display:inline-flex;align-items:center}
+  /* ── КНОПКИ / ТАЧ-ТАРГЕТЫ ── */
+  .btn{min-height:40px;padding:9px 15px}
+  .btn-sm{min-height:36px;padding:8px 12px;font-size:12px}
+  .btn-save{min-height:44px;padding:11px 20px}
+  .mb{min-height:38px;padding:9px 14px;font-size:12px}
+  .acc-ebtn{top:8px;right:8px;min-width:34px;min-height:30px;padding:6px 10px;font-size:11px}
+  /* ── МОДАЛКИ ── */
+  .moverlay{padding:.7rem;align-items:flex-start}
+  .modal{max-width:92vw;width:92vw;max-height:90vh;overflow-y:auto;padding:1.15rem;border-radius:14px;margin-top:5vh}
+  .mtitle{font-size:15px}
+  .mclose{min-width:36px;min-height:36px;display:inline-flex;align-items:center;justify-content:center;padding:0;font-size:19px}
+  .mfooter{flex-direction:column-reverse;gap:8px}
+  .mfooter .btn{width:100%;justify-content:center;min-height:44px}
+  /* ── ТОСТ ── */
+  .toast{left:.85rem;right:.85rem;bottom:14px;text-align:center}
+  /* ── ПЛАН/ФАКТ ── */
+  .pf-hdr,.pf-row{grid-template-columns:96px 1fr 1fr 58px 46px;gap:4px}
+  .pf-hdr{font-size:9px;letter-spacing:.3px}
+  .pf-cat{font-size:11px}
+  .pf-plan,.pf-d{font-size:10px}
+  .pf-fi{padding:5px 6px;font-size:16px}
+  /* ── ДОХОДЫ таблица ── */
+  .tbl{font-size:10px}
+  .tbl th,.tbl td{padding:5px 6px}
+  .tbl th:first-child{min-width:108px}
+  /* ── РАСХОДЫ полоски ── вернуть ширину дорожке */
+  .br{gap:7px}
+  .br-lbl{min-width:88px;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .br-pct{min-width:34px;font-size:11px}
+  .br-rp{min-width:76px;font-size:11px}
+  .br-usd{min-width:60px;font-size:10px}
+  #exp-bars .br-usd{display:none}
+  /* ── KPI-плитки ── */
+  .kpi{padding:.8rem .85rem;gap:8px}
+  .kpi-l{min-width:0}.kpi-r{min-width:0}
+  .kl{font-size:11.5px}
+  .kv{font-size:18px;letter-spacing:-.3px;line-height:1.1;overflow-wrap:anywhere;word-break:break-word}
+  .ks{font-size:11px}
+  /* ── Итого-карточки счетов ── */
+  .acc-tot-card{padding:.85rem .9rem;gap:8px}
+  .acc-tot-l{min-width:0}
+  .acc-tot-val{font-size:17px;flex-shrink:1;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+  .acc-tot-sub{overflow-wrap:anywhere}
+  .acc-bal{font-size:18px;overflow-wrap:anywhere}
+  .acc-card{padding:1rem}
+  /* ── Графики: подрезать высокие (динамический ch-exp-bw НЕ трогаем) ── */
+  .cw[style*="height:280px"]{height:220px!important}
+  .cw[style*="height:230px"]{height:200px!important}
+  .cw[style*="height:210px"]{height:190px!important}
+  .ctitle{flex-wrap:wrap}
+  /* ── Редактор целей: вторая строка ── */
+  .sav-ed-bot{padding-left:0;gap:7px}
+  .sav-ed-bot label{font-size:12px}
+  .ce-tgt{width:90px}
+  /* ── Подвкладки + конверты ── */
+  .subnav{width:auto}
+  .subtab{flex:1;padding:8px 10px;text-align:center}
+  .pot-grand-cards{grid-template-columns:1fr}
+  .pot-goal-h{padding-left:10px}
+  .save-row .btn-save{padding:9px 18px}
+}
+@media(max-width:480px){
+  .pf-sum-g{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -505,7 +675,6 @@ select option{background:#fff;color:var(--text)}
       <span style="font-size:11px;color:var(--text3)">% дохода · сумма Rp · сумма USD</span>
     </div>
     <div id="exp-bars"></div>
-    <div class="save-row"><button class="btn btn-save" id="btn-save-exp">💾 Сохранить</button></div>
   </div>
   <div class="g2 mb2">
     <div class="card cg">
@@ -521,21 +690,35 @@ select option{background:#fff;color:var(--text)}
 
 <!-- SAVINGS -->
 <div id="pg-savings" class="pg">
-  <div class="g4 mb2" id="sav-kpis"></div>
-  <div class="g2 mb2">
-    <div class="card cp">
-      <div class="ctitle"><span class="l"><span class="dot p"></span>Прогресс по целям</span></div>
-      <div id="sav-goals"></div>
-      <div class="save-row"><button class="btn btn-save" id="btn-save-sav">💾 Сохранить</button></div>
+  <div id="sav-subnav" class="subnav">
+    <button class="subtab act" data-tab="plan" onclick="spSav('plan')">📈 План по целям</button>
+    <button class="subtab" data-tab="real" onclick="spSav('real')">💵 Реальный остаток</button>
+  </div>
+
+  <div id="sav-pane-plan">
+    <div class="g4 mb2" id="sav-kpis"></div>
+    <div class="g2 mb2">
+      <div class="card cp">
+        <div class="ctitle"><span class="l"><span class="dot p"></span>Прогресс по целям</span></div>
+        <div id="sav-goals"></div>
+      </div>
+      <div class="card cp">
+        <div class="ctitle"><span class="l"><span class="dot p"></span>Накопления по месяцам (млн Rp)</span></div>
+        <div class="cw" style="height:280px"><canvas id="ch-sav-m"></canvas></div>
+      </div>
     </div>
-    <div class="card cp">
-      <div class="ctitle"><span class="l"><span class="dot p"></span>Накопления по месяцам (млн Rp)</span></div>
-      <div class="cw" style="height:280px"><canvas id="ch-sav-m"></canvas></div>
+    <div class="card cg mb2">
+      <div class="ctitle"><span class="l"><span class="dot g"></span>% накоплений от дохода · цель 20%</span></div>
+      <div class="cw" style="height:170px"><canvas id="ch-sav-p"></canvas></div>
     </div>
   </div>
-  <div class="card cg mb2">
-    <div class="ctitle"><span class="l"><span class="dot g"></span>% накоплений от дохода · цель 20%</span></div>
-    <div class="cw" style="height:170px"><canvas id="ch-sav-p"></canvas></div>
+
+  <div id="sav-pane-real" style="display:none">
+    <div class="card cp">
+      <div class="ctitle"><span class="l"><span class="dot p"></span>Реальный остаток — конверты по целям</span>
+        <button class="btn btn-pr btn-sm" onclick="openAddPot()">＋ Конверт</button></div>
+      <div id="pots-body"></div>
+    </div>
   </div>
 </div>
 
@@ -625,6 +808,8 @@ create policy "anon all" on budget
       <div class="ctitle"><span class="l"><span class="dot p"></span>Цели накоплений</span></div>
       <div id="ed-sav"></div>
       <button class="btn btn-gh btn-sm mt1" id="btn-add-sav-cat">+ Цель</button>
+      <label class="sav-auto"><input type="checkbox" id="st-savauto"> Закрывать цель автоматически при достижении суммы</label>
+      <p style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:.5rem">«Цель, млн Rp» — нужная сумма. «Закрыть» — пометить достигнутую цель завершённой (например, байк куплен): она уйдёт вниз списка и в «Накоплениях», но история останется. Удаление (✕) стирает цель целиком.</p>
       <div class="save-row"><button class="btn btn-save" id="btn-save-sav-cat">💾 Сохранить</button></div>
     </div>
   </div>
@@ -667,6 +852,24 @@ create policy "anon all" on budget
       <button class="btn btn-gh" onclick="cm('m-acc')">Отмена</button>
       <button class="btn btn-r btn-sm" id="am-del">Удалить</button>
       <button class="btn btn-save" id="btn-save-acc">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="moverlay" id="m-pot">
+  <div class="modal">
+    <div class="mtitle" id="m-pot-t">Конверт<button class="mclose" onclick="cm('m-pot')">✕</button></div>
+    <div class="mrow"><label>Цель</label><select id="pm-goal"></select></div>
+    <div class="mrow"><label>Счёт (определяет валюту)</label><select id="pm-acc"></select>
+      <div class="pot-ccyhint" id="pm-ccyhint">Выберите счёт</div></div>
+    <div class="mrow"><label>Сумма (в валюте счёта)</label><input type="number" id="pm-amt" step="any"></div>
+    <div class="mrow"><label>Заметка (необязательно)</label><input type="text" id="pm-note" placeholder="напр. первый взнос"></div>
+    <div class="incprev" id="pm-prev">—</div>
+    <input type="hidden" id="pm-id">
+    <div class="mfooter">
+      <button class="btn btn-gh" onclick="cm('m-pot')">Отмена</button>
+      <button class="btn btn-r btn-sm" id="pm-del">Удалить</button>
+      <button class="btn btn-save" id="btn-save-pot">💾 Сохранить</button>
     </div>
   </div>
 </div>
@@ -752,7 +955,7 @@ const CC={g:'#1f9d6b',r:'#e0603a',a:'#cf8500',p:'#6f5ae0',p2:'#8472ec',t:'#0d948
 function defData(){
   return{
     rates:{usdIdr:17000,uahIdr:400,usdtUsd:1,thbIdr:580},
-    settings:{snUah:80000,vo1:1900,vo2:1900},
+    settings:{snUah:80000,vo1:1900,vo2:1900,savAutoClose:false},
     accounts:[
       {id:1,own:'sn',name:'Monobank UAH',bank:'Monobank',ccy:'UAH',bal:15000},
       {id:2,own:'sn',name:'Рупии нал.',bank:'Наличные',ccy:'IDR',bal:5000},
@@ -786,6 +989,7 @@ function defData(){
       {id:'bike2',name:'Байк N-max',color:'#cf8500',target:45,plan:[17,26.5,0,0,0,0,0,0,0,0,0,0]},
       {id:'house',name:'Жильё ~100M Rp',color:'#1f9d6b',target:600,plan:[0,0,0,0,0,0,41,46,35,0,41,16]},
     ],
+    savPots:[],
     incCats:[
       {id:'sn_s',name:'ЗП Снежаны',own:'sn',color:'#1f9d6b',plan:[24,24,32,31,30,30,30,30,30,30,30,30]},
       {id:'vo_s',name:'ЗП Вовы',own:'vo',color:'#5b9bd5',plan:[53,53,53,61,61,61,61,61,61,61,61,61]},
@@ -945,6 +1149,15 @@ function tiArr(){return MN.map((_,i)=>D.incCats.reduce((s,c)=>s+(c.plan[i]||0),0
 function teArr(){return MN.map((_,i)=>D.expCats.reduce((s,c)=>s+(c.plan[i]||0),0))}
 function tdArr(){return MN.map((_,i)=>D.debtCats.reduce((s,c)=>s+(c.plan[i]||0),0))}
 function tsArr(){return MN.map((_,i)=>D.savCats.reduce((s,c)=>s+(c.plan[i]||0),0))}
+/* Авто-закрытие целей: если включено в настройках — достигнутые цели помечаются closed.
+   Одностороннее (не открывает обратно), вернуть в работу можно вручную кнопкой «Открыть». */
+function savTot(c){return c.plan.reduce((a,b)=>a+(b||0),0)}
+function applyAutoClose(){
+  if(!D||!(D.settings&&D.settings.savAutoClose))return false;
+  let ch=false;
+  (D.savCats||[]).forEach(c=>{if(c.target>0&&savTot(c)>=c.target&&!c.closed){c.closed=true;ch=true;}});
+  return ch;
+}
 function toIdr(amt,ccy){
   const r=D.rates;
   if(ccy==='IDR')return amt;
@@ -1019,7 +1232,7 @@ function sp(id,btn){
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
   document.getElementById('pg-'+id).classList.add('act');
   if(btn)btn.classList.add('act');
-  ({overview:rOv,income:rInc,planfact:rPF,expenses:rExp,savings:rSav,accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:rOv,income:rInc,planfact:rPF,expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 
 /* ═══════════════ HEADER ═══════════════ */
@@ -1410,7 +1623,9 @@ function saveCatModal(){
   else if(type==='sav')D.savCats.push({id,name,color,target:0,plan:Array(12).fill(0)});
   else if(type==='debt')D.debtCats.push({id,name,plan:Array(12).fill(0)});
   else if(type==='inc')D.incCats.push({id,name,own:'',color,plan:Array(12).fill(0)});
-  lsSave();cm('m-addcat');rPF();rSet();toast(name+' добавлено ✓');
+  lsSave();cm('m-addcat');rPF();rSet();
+  if(document.getElementById('pg-savings').classList.contains('act'))spSav(_savTab);
+  toast(name+' добавлено ✓');
 }
 function openRen(id,type,curName){
   document.getElementById('ren-id').value=id;
@@ -1455,23 +1670,222 @@ function rExp(){
       scales:{x:{ticks:{callback:axFmt},grid:{color:'rgba(22,24,18,.06)'}},y:{ticks:{autoSkip:false,font:{size:10}},grid:{display:false}}}});
 }
 
+/* ═══════════════ SAVINGS · POTS (реальный остаток / конверты) ═══════════════
+   Конверт = вручную внесённая сумма реальных денег, ПРИВЯЗАННАЯ к счёту
+   (валюта берётся со счёта). Группируются по цели (savCats). Можно несколько
+   конвертов под одну цель с разных счетов. Суммы — в СЫРЫХ единицах валюты счёта
+   (как accounts.bal), НЕ в млн — чтобы сходиться с calcAccTotals(). */
+const POTCOLS={IDR:CC.g,USD:CC.b,THB:CC.pk,UAH:CC.a,USDT:CC.t,BTC:'#e0890a',ETH:CC.p2};
+const CCY_ORDER=['IDR','USD','USDT','UAH','THB','BTC','ETH'];
+let _savTab='plan';
+function accById(id){return D.accounts.find(a=>a.id===id);}
+function goalById(id){return D.savCats.find(c=>c.id===id);}
+function potIdr(p){const a=accById(p.accId);return a?toIdr(p.amt||0,a.ccy):0;}   // счёт удалён → 0, не NaN
+function escapeHtml(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function ccyAmt(ccy,amt){const sym=CSYM[ccy]||'';const n=Math.round(amt).toLocaleString('ru');return sym?sym+n:n+' '+ccy;}
+function potNative(p){const a=accById(p.accId);if(!a)return '— счёт удалён';const sym=CSYM[a.ccy]||'';const n=(p.amt||0).toLocaleString('ru');return sym?sym+n:n+' '+a.ccy;}
+
+function spSav(tab){
+  _savTab=tab;
+  const pl=document.getElementById('sav-pane-plan'),re=document.getElementById('sav-pane-real');
+  if(pl)pl.style.display=tab==='plan'?'':'none';
+  if(re)re.style.display=tab==='real'?'':'none';
+  document.querySelectorAll('#sav-subnav .subtab').forEach(b=>b.classList.toggle('act',b.dataset.tab===tab));
+  if(tab==='real')rPots();else rSav();
+}
+
+function rPots(){
+  if(!document.getElementById('pg-savings').classList.contains('act'))return;
+  const wrap=document.getElementById('pots-body');if(!wrap)return;
+  const{totIdr}=calcAccTotals();                       // все деньги (актуальные рупии)
+  const pots=Array.isArray(D.savPots)?D.savPots:[];
+  if(!D.accounts.length){wrap.innerHTML='<div class="pots-empty">Сначала добавьте счёт на вкладке «Счета» — конверты привязываются к счёту.</div>';return;}
+
+  const ordCats=[...D.savCats].sort((a,b)=>(a.closed?1:0)-(b.closed?1:0));   // закрытые цели вниз
+  const byGoal=new Map();ordCats.forEach(c=>byGoal.set(c.id,[]));
+  const orphan=[];
+  pots.forEach(p=>{if(byGoal.has(p.goalId))byGoal.get(p.goalId).push(p);else orphan.push(p);});
+  const allocByAcc={};pots.forEach(p=>{allocByAcc[p.accId]=(allocByAcc[p.accId]||0)+potIdr(p);});
+
+  let otlozhenoIdr=0;const byCcy={};
+  pots.forEach(p=>{const a=accById(p.accId);const idr=potIdr(p);otlozhenoIdr+=idr;if(!a)return;
+    if(!byCcy[a.ccy])byCcy[a.ccy]={bal:0,idr:0};byCcy[a.ccy].bal+=(p.amt||0);byCcy[a.ccy].idr+=idr;});
+  const svobodnoIdr=totIdr-otlozhenoIdr;
+
+  const goalCcyStr=list=>{const m={};list.forEach(p=>{const a=accById(p.accId);if(a)m[a.ccy]=(m[a.ccy]||0)+(p.amt||0);});
+    const keys=Object.keys(m).sort((a,b)=>CCY_ORDER.indexOf(a)-CCY_ORDER.indexOf(b));
+    return keys.map(c=>ccyAmt(c,m[c])).join(' + ')||'—';};
+
+  const renderGoalBlock=(goal,list,isOrphan)=>{
+    if(!list.length)return '';
+    const gIdr=list.reduce((s,p)=>s+potIdr(p),0);
+    const pctAll=totIdr>0?(gIdr/totIdr*100).toFixed(1):'0.0';
+    const col=isOrphan?'#a8aaa4':(goal.color||'#6f5ae0');
+    const closed=goal&&goal.closed;
+    const name=isOrphan?'⚠ Удалённая цель':(escapeHtml(goal.name)+(closed?' <span class="prog-tag closed">✓ закрыто</span>':''));
+    const actionBtn=(!isOrphan&&goal&&!closed&&list.length)?` <button class="btn btn-gh btn-sm pot-spend" onclick="spendGoal('${goal.id}')" title="Списать отложенное со счетов и закрыть цель">🎯 Реализовать</button>`:'';
+    const rows=list.map(p=>{
+      const a=accById(p.accId);const idr=potIdr(p);
+      const accLbl=a?escapeHtml((OL[a.own]||'')+' · '+a.name):'⚠ счёт удалён';
+      const over=a&&allocByAcc[p.accId]>toIdr(a.bal,a.ccy)+0.5;
+      return`<div class="pot-row" onclick="openEditPot(${p.id})">
+        <div class="pot-acc"><span class="pot-dot" style="background:${col}"></span>${accLbl}${over?' <span class="pot-warn" title="На этом счёте отложено больше, чем на нём есть">⚠ перерасход счёта</span>':''}${p.note?`<span class="pot-note">· ${escapeHtml(p.note)}</span>`:''}</div>
+        <div class="pot-amt">${potNative(p)}<span class="pot-conv">${fRpA(idr)} · ${fUsdA(idr)}</span></div>
+      </div>`;}).join('');
+    return`<div class="pot-goal ${closed?'is-closed':''}">
+      <div class="pot-goal-h" style="border-left:4px solid ${col}">
+        <div class="pot-goal-name">${name}${actionBtn}</div>
+        <div class="pot-goal-tot"><b>${goalCcyStr(list)}</b><span class="pot-goal-conv">${fRpA(gIdr)} · ${fUsdA(gIdr)} · ${pctAll}% от всех денег</span></div>
+      </div>
+      ${rows}
+    </div>`;};
+
+  let html='';
+  ordCats.forEach(c=>{html+=renderGoalBlock(c,byGoal.get(c.id),false);});
+  html+=renderGoalBlock(null,orphan,true);
+  if(!html)html='<div class="pots-empty">Пока нет конвертов. Нажмите «＋ Конверт», чтобы отложить часть реальных денег под цель.</div>';
+
+  const barFor=(name,col,idr)=>{const p=totIdr>0?(idr/totIdr*100).toFixed(1):'0.0';
+    return`<div class="br"><span class="br-lbl" style="color:${col};font-weight:700">${name}</span>
+      <div class="br-track"><div class="br-fill" style="width:${Math.max(0,Math.min(100,+p))}%;background:${col}"></div></div>
+      <span class="br-pct" style="color:${col}">${p}%</span><span class="br-rp">${fRpA(idr)}</span><span class="br-usd">${fUsdA(idr)}</span></div>`;};
+  let bars='';
+  ordCats.forEach(c=>{const idr=(byGoal.get(c.id)||[]).reduce((s,p)=>s+potIdr(p),0);if(idr>0)bars+=barFor(escapeHtml(c.name),c.color||'#6f5ae0',idr);});
+  const orphIdr=orphan.reduce((s,p)=>s+potIdr(p),0);if(orphIdr>0)bars+=barFor('Удалённая цель','#a8aaa4',orphIdr);
+  if(svobodnoIdr>0)bars+=barFor('Свободно','#c2c4ba',svobodnoIdr);
+
+  let ccyBars='';
+  Object.keys(byCcy).sort((a,b)=>CCY_ORDER.indexOf(a)-CCY_ORDER.indexOf(b)).forEach(c=>{
+    const{idr}=byCcy[c];const p=otlozhenoIdr>0?(idr/otlozhenoIdr*100).toFixed(1):'0.0';const col=POTCOLS[c]||CC.p;
+    ccyBars+=`<div class="br"><span class="br-lbl" style="color:${col};font-weight:700">${c}</span>
+      <div class="br-track"><div class="br-fill" style="width:${p}%;background:${col}"></div></div>
+      <span class="br-pct" style="color:${col}">${p}%</span><span class="br-rp">${fRpA(idr)}</span><span class="br-usd">${fUsdA(idr)}</span></div>`;});
+
+  const over=svobodnoIdr<0;
+  const gtotCcy=CCY_ORDER.filter(c=>byCcy[c]).map(c=>ccyAmt(c,byCcy[c].bal)).join(' + ');
+  html+=`<div class="pot-grand">
+    <div class="pot-grand-cards">
+      <div class="acc-tot-card highlight" style="border-left:4px solid var(--indigo)">
+        <div class="acc-tot-l"><div class="acc-tot-lbl">Итого отложено</div><div class="acc-tot-sub">${gtotCcy||'—'} · ${fUsdA(otlozhenoIdr)}</div></div>
+        <div class="acc-tot-val kv p">${fRpA(otlozhenoIdr)}</div>
+      </div>
+      <div class="acc-tot-card" style="border-left:4px solid ${over?'var(--red)':'var(--green)'}">
+        <div class="acc-tot-l"><div class="acc-tot-lbl">${over?'Перерасход':'Свободно'}</div><div class="acc-tot-sub">${totIdr>0?(Math.abs(svobodnoIdr)/totIdr*100).toFixed(1):'0'}% от всех денег · ${fUsdA(Math.abs(svobodnoIdr))}</div></div>
+        <div class="acc-tot-val kv ${over?'r':'g'}">${over?'−':''}${fRpA(Math.abs(svobodnoIdr))}</div>
+      </div>
+    </div>
+    ${over?'<div class="pot-overwarn">⚠ Отложено больше, чем есть на счетах. Уменьшите конверты или пополните счета.</div>':''}
+    ${bars?`<div class="ctitle"><span class="l"><span class="dot p"></span>Распределение по целям</span></div>${bars}`:''}
+    ${ccyBars?`<div class="ctitle" style="margin-top:1.1rem"><span class="l"><span class="dot t"></span>Отложено по валютам</span></div>${ccyBars}`:''}
+  </div>`;
+  wrap.innerHTML=html;
+}
+
+/* ── модалка конверта (зеркалит m-acc) ── */
+function fillPotSelects(selGoal,selAcc){
+  const gSel=document.getElementById('pm-goal');
+  gSel.innerHTML=D.savCats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}${c.closed?' (закрыта)':''}</option>`).join('')||'<option value="">— нет целей —</option>';
+  if(selGoal!=null)gSel.value=selGoal;
+  const aSel=document.getElementById('pm-acc');
+  aSel.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)} · ${a.ccy} (${escapeHtml((OL[a.own]||'').replace(/^\S+\s/,''))})</option>`).join('')||'<option value="">— нет счетов —</option>';
+  if(selAcc!=null)aSel.value=selAcc;
+  updatePotCcyHint();
+}
+function updatePotCcyHint(){
+  const a=accById(+document.getElementById('pm-acc').value);
+  const h=document.getElementById('pm-ccyhint');if(h)h.textContent=a?`Сумма вводится в валюте счёта: ${a.ccy}`:'Выберите счёт';
+  updatePotPrev();
+}
+function updatePotPrev(){
+  const a=accById(+document.getElementById('pm-acc').value);
+  const amt=+document.getElementById('pm-amt').value||0;
+  const el=document.getElementById('pm-prev');if(!el)return;
+  el.innerHTML=a?`≈ <b>${fRpA(toIdr(amt,a.ccy))}</b> · ${fUsdA(toIdr(amt,a.ccy))}`:'—';
+}
+function openAddPot(presetGoalId){
+  if(!D.accounts.length){toast('Сначала добавьте счёт на вкладке «Счета»','warn');return;}
+  if(!D.savCats.length){toast('Сначала создайте цель в Настройках','warn');return;}
+  document.getElementById('m-pot-t').textContent='Добавить конверт';
+  document.getElementById('pm-id').value='';
+  document.getElementById('pm-amt').value='';
+  document.getElementById('pm-note').value='';
+  fillPotSelects(D.savCats[0].id,D.accounts[0].id);
+  if(presetGoalId!=null&&goalById(presetGoalId))document.getElementById('pm-goal').value=presetGoalId;
+  document.getElementById('pm-del').style.display='none';
+  om('m-pot');
+}
+function openEditPot(id){
+  const p=(D.savPots||[]).find(x=>x.id===id);if(!p)return;
+  document.getElementById('m-pot-t').textContent='Редактировать конверт';
+  document.getElementById('pm-id').value=id;
+  fillPotSelects(p.goalId,p.accId);
+  if(!accById(p.accId)){const o=document.createElement('option');o.value=p.accId;o.textContent='⚠ счёт удалён — выберите другой';document.getElementById('pm-acc').appendChild(o);document.getElementById('pm-acc').value=p.accId;}
+  if(!goalById(p.goalId)){const o=document.createElement('option');o.value=p.goalId;o.textContent='⚠ цель удалена — выберите другую';document.getElementById('pm-goal').appendChild(o);document.getElementById('pm-goal').value=p.goalId;}
+  document.getElementById('pm-amt').value=p.amt;
+  document.getElementById('pm-note').value=p.note||'';
+  document.getElementById('pm-del').style.display='inline-flex';
+  updatePotCcyHint();
+  om('m-pot');
+}
+function savePot(){
+  const id=document.getElementById('pm-id').value;
+  const goalId=document.getElementById('pm-goal').value;
+  const accId=+document.getElementById('pm-acc').value;
+  const amt=Math.max(0,+document.getElementById('pm-amt').value||0);
+  if(!goalId||!goalById(goalId)){toast('Выберите существующую цель','err');return;}
+  if(!accId||!accById(accId)){toast('Выберите существующий счёт','err');return;}
+  const p={id:id?+id:Date.now(),goalId,accId,amt,note:document.getElementById('pm-note').value.trim()};
+  if(!Array.isArray(D.savPots))D.savPots=[];
+  if(id){const i=D.savPots.findIndex(x=>x.id===+id);if(i>=0)D.savPots[i]=p;else D.savPots.push(p);}
+  else D.savPots.push(p);
+  lsSave();cm('m-pot');rPots();toast('Конверт сохранён ✓');
+}
+function delPot(){
+  const id=+document.getElementById('pm-id').value;
+  D.savPots=(D.savPots||[]).filter(p=>p.id!==id);
+  lsSave();cm('m-pot');rPots();toast('Конверт удалён');
+}
+/* Реализовать цель: потратить накопленное — списать суммы конвертов с привязанных счетов,
+   удалить эти конверты и закрыть цель. Напр. «Отпуск»: деньги ушли на поездку. */
+function spendGoal(goalId){
+  const goal=goalById(goalId);if(!goal)return;
+  const list=(D.savPots||[]).filter(p=>p.goalId===goalId);
+  if(!list.length){toast('Под эту цель ничего не отложено','warn');return;}
+  const lines=list.map(p=>{const a=accById(p.accId);return a?('• '+a.name+': −'+potNative(p)):'• (счёт удалён — пропущен)';});
+  const tot=list.reduce((s,p)=>s+potIdr(p),0);
+  if(!confirm('Закрыть цель «'+goal.name+'», потратив накопленное?\n\nСпишется со счетов:\n'+lines.join('\n')+'\nИтого ≈ '+fRpA(tot)+'\n\nБалансы счетов уменьшатся, конверты этой цели удалятся, цель станет закрытой. Отменить автоматически нельзя.'))return;
+  list.forEach(p=>{const a=accById(p.accId);if(a)a.bal=Math.max(0,(+a.bal||0)-(+p.amt||0));});
+  D.savPots=(D.savPots||[]).filter(p=>p.goalId!==goalId);
+  goal.closed=true;
+  lsSave();rPots();upHdr();
+  if(document.getElementById('pg-accounts').classList.contains('act'))rAcc();
+  toast('Цель «'+goal.name+'» закрыта, потрачено '+fRpA(tot)+' ✓');
+}
+
 /* ═══════════════ SAVINGS ═══════════════ */
 function rSav(){
+  if(applyAutoClose())autoSave();
   const ts=tsArr(),ti=tiArr(),maxS=Math.max(...ts)*1.25||100;
-  document.getElementById('sav-kpis').innerHTML=D.savCats.map(c=>{
-    const tot=c.plan.reduce((a,b)=>a+b,0);
+  const ordCats=[...D.savCats].sort((a,b)=>(a.closed?1:0)-(b.closed?1:0));   // закрытые цели — вниз
+  document.getElementById('sav-kpis').innerHTML=ordCats.map(c=>{
+    const tot=c.plan.reduce((a,b)=>a+b,0),reached=c.target&&tot>=c.target;
     const pct=c.target?Math.min((tot/c.target*100),100).toFixed(0):0;
-    return`<div class="kpi" style="border-left:4px solid ${c.color}">
-      <div class="kpi-l"><div class="kl">${c.name}</div><div class="ks">Цель: ${fRp(c.target)} · <b>${fUsd(tot)}</b></div></div>
+    const badge=c.closed?'<div class="kpct closed">✓ закрыто</div>'
+      :reached?'<div class="kpct pos">🎯 цель достигнута</div>'
+      :`<div class="kpct ${+pct>=100?'pos':+pct>=50?'neu':'neg'}">${pct}% цели</div>`;
+    return`<div class="kpi ${c.closed?'kpi-closed':''}" style="border-left:4px solid ${c.color}">
+      <div class="kpi-l"><div class="kl">${escapeHtml(c.name)}</div><div class="ks">Цель: ${fRp(c.target)} · <b>${fUsd(tot)}</b></div></div>
       <div class="kpi-r"><div class="kv" style="font-size:16px;color:${ink(c.color)}">${fRp(tot)}</div>
-        <div class="kpct ${+pct>=100?'pos':+pct>=50?'neu':'neg'}">${pct}% цели</div></div>
+        ${badge}</div>
     </div>`;}).join('');
-  document.getElementById('sav-goals').innerHTML=D.savCats.map(c=>{
+  document.getElementById('sav-goals').innerHTML=ordCats.map(c=>{
     const tot=c.plan.reduce((a,b)=>a+b,0);const p=c.target?Math.min(tot/c.target*100,100):0;
-    return`<div class="prog">
-      <div class="prog-h"><span class="prog-name">${c.name}</span>
+    const tag=c.closed?'<span class="prog-tag closed">✓ закрыто</span>'
+      :(c.target&&tot>=c.target?'<span class="prog-tag done">🎯 достигнута</span>':'');
+    return`<div class="prog ${c.closed?'is-closed':''}">
+      <div class="prog-h"><span class="prog-name">${escapeHtml(c.name)} ${tag}</span>
         <span class="prog-vals"><b>${fRp(tot)}</b> из ${fRp(c.target)}</span></div>
-      <div class="prog-t"><div class="prog-f" style="width:${p}%;background:${c.color}"></div></div>
+      <div class="prog-t"><div class="prog-f" style="width:${p}%;background:${c.closed?'#c2c4ba':c.color}"></div></div>
     </div>`;}).join('');
   mkCh('ch-sav-m','bar',{labels:MN,datasets:D.savCats.map(c=>({
     label:c.name,data:c.plan,backgroundColor:c.color+'cc',stack:'s',borderRadius:2
@@ -1554,7 +1968,13 @@ function rAcc(){
       <span class="br-pct" style="color:${col}">${p}%</span>
       <span class="br-rp">${fRpA(idrActual)}</span>
       <span class="br-usd">${fUsdA(idrActual)}</span>
-    </div>`;}).join('');
+    </div>`;}).join('')+
+    `<div class="br br-total"><span class="br-lbl">Итого</span>
+      <div class="br-track"></div>
+      <span class="br-pct">100%</span>
+      <span class="br-rp">${fRpA(totIdr)}</span>
+      <span class="br-usd">${fUsdA(totIdr)}</span>
+    </div>`;
 }
 
 function openAddAcc(){
@@ -1600,6 +2020,7 @@ function rSet(){
   document.getElementById('st-v2').value=D.settings.vo2;
   document.getElementById('st-round').value=D.settings.incRound||0;
   const ab=document.getElementById('st-autobk');if(ab)ab.checked=localStorage.getItem(LSK+'_autobk')!=='0';
+  const sa=document.getElementById('st-savauto');if(sa)sa.checked=!!D.settings.savAutoClose;
   refreshSnapshotList();
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
@@ -1616,7 +2037,8 @@ function rSet(){
   if(rs)rs.textContent=_wrapRc?'код создан ✓':'нет кода';
 }
 function saveSettings(){
-  D.settings={snUah:+document.getElementById('st-sn').value||80000,
+  D.settings={...D.settings,
+    snUah:+document.getElementById('st-sn').value||80000,
     vo1:+document.getElementById('st-v1').value||1900,
     vo2:+document.getElementById('st-v2').value||1900,
     incRound:+document.getElementById('st-round').value||0};
@@ -1691,20 +2113,66 @@ async function fetchRatesOnline(){
 }
 function rCatEd(elId,cats,type){
   const el=document.getElementById(elId);if(!el)return;
+  if(type==='sav'){rSavCatEd(el);return;}
   el.innerHTML=cats.map((c,i)=>`
     <div class="cat-ed-row">
-      <div class="cat-swatch" style="background:${c.color}"></div>
-      <input type="text" class="ce-n" value="${c.name}" data-i="${i}" data-t="${type}" style="flex:1">
+      <input type="color" class="ce-color" value="${c.color||'#3f7ad1'}" data-i="${i}" data-t="${type}" title="Цвет категории">
+      <input type="text" class="ce-n" value="${escapeHtml(c.name)}" data-i="${i}" data-t="${type}" style="flex:1">
       <button class="btn btn-r btn-sm ce-d" data-i="${i}" data-t="${type}">✕</button>
     </div>`).join('');
   el.querySelectorAll('.ce-n').forEach(inp=>{
     inp.addEventListener('change',e=>{const{i,t}=e.target.dataset;
       (t==='exp'?D.expCats:D.savCats)[+i].name=e.target.value;autoSave();});
   });
+  el.querySelectorAll('.ce-color').forEach(inp=>{
+    inp.addEventListener('change',e=>{const{i,t}=e.target.dataset;
+      (t==='exp'?D.expCats:D.savCats)[+i].color=e.target.value;lsSave();
+      if(t==='exp'&&document.getElementById('pg-expenses').classList.contains('act'))rExp();});
+  });
   el.querySelectorAll('.ce-d').forEach(btn=>{
     btn.addEventListener('click',e=>{const{i,t}=e.target.dataset;
       (t==='exp'?D.expCats:D.savCats).splice(+i,1);lsSave();rCatEd(elId,t==='exp'?D.expCats:D.savCats,t);});
   });
+}
+/* Редактор целей накоплений: название, сумма цели (млн Rp), статус, закрыть/открыть, удалить.
+   data-i — исходный индекс в D.savCats (берём ДО сортировки, чтобы обработчики не сбивались). */
+function rSavCatEd(el){
+  const rerender=()=>{rSavCatEd(el);if(document.getElementById('pg-savings').classList.contains('act'))rSav();};
+  if(applyAutoClose())autoSave();
+  const rows=D.savCats.map((c,i)=>({c,i})).sort((a,b)=>(a.c.closed?1:0)-(b.c.closed?1:0));
+  el.innerHTML=rows.map(({c,i})=>{
+    const tot=savTot(c),reached=c.target>0&&tot>=c.target;
+    const pct=c.target>0?Math.min(Math.round(tot/c.target*100),999):0;
+    const stat=c.closed?'<span class="ce-stat closed">✓ закрыто</span>'
+      :reached?'<span class="ce-stat done">🎯 достигнута</span>'
+      :`<span class="ce-stat prog">${pct}% · ${fRp(tot)}</span>`;
+    const cbtn=c.closed?`<button class="ce-close re" data-i="${i}">↩ Открыть</button>`
+      :`<button class="ce-close do" data-i="${i}">✓ Закрыть</button>`;
+    return`<div class="sav-ed-row ${c.closed?'is-closed':''}">
+      <div class="sav-ed-top">
+        <input type="color" class="ce-color" value="${c.color||'#6f5ae0'}" data-i="${i}" title="Цвет цели">
+        <input type="text" class="ce-n" value="${escapeHtml(c.name)}" data-i="${i}" style="flex:1">
+        <button class="btn btn-r btn-sm ce-d" data-i="${i}">✕</button>
+      </div>
+      <div class="sav-ed-bot">
+        <label>Цель, млн Rp</label>
+        <input type="number" class="ce-tgt" value="${c.target||0}" data-i="${i}" step="any">
+        ${stat}${cbtn}
+      </div>
+    </div>`;}).join('');
+  el.querySelectorAll('.ce-n').forEach(inp=>inp.addEventListener('change',e=>{
+    D.savCats[+e.target.dataset.i].name=e.target.value;autoSave();}));
+  el.querySelectorAll('.ce-color').forEach(inp=>inp.addEventListener('change',e=>{
+    D.savCats[+e.target.dataset.i].color=e.target.value;lsSave();rerender();}));
+  el.querySelectorAll('.ce-tgt').forEach(inp=>inp.addEventListener('change',e=>{
+    D.savCats[+e.target.dataset.i].target=+e.target.value||0;lsSave();rerender();}));
+  el.querySelectorAll('.ce-close').forEach(btn=>btn.addEventListener('click',e=>{
+    const c=D.savCats[+e.currentTarget.dataset.i];c.closed=!c.closed;lsSave();rerender();
+    toast(c.closed?'«'+c.name+'» — цель закрыта ✓':'«'+c.name+'» — цель снова активна');}));
+  el.querySelectorAll('.ce-d').forEach(btn=>btn.addEventListener('click',e=>{
+    const i=+e.target.dataset.i;
+    if(!confirm('Удалить цель «'+D.savCats[i].name+'» целиком? Чтобы скрыть достигнутую цель, лучше «Закрыть».'))return;
+    D.savCats.splice(i,1);lsSave();rerender();}));
 }
 
 /* ═══════════════ EXPORT/IMPORT ═══════════════ */
@@ -1813,10 +2281,12 @@ function bindButtons(){
   document.getElementById('btn-add-debt-pf').onclick=()=>openAddCat('debt','Новая статья долга');
   document.getElementById('btn-add-sav-pf').onclick=()=>openAddCat('sav','Новая цель накоплений');
   document.getElementById('btn-save-pf').onclick=()=>{lsSave();toast('Факты сохранены ✓')};
-  document.getElementById('btn-save-exp').onclick=()=>{lsSave();toast('Сохранено ✓')};
-  document.getElementById('btn-save-sav').onclick=()=>{lsSave();toast('Сохранено ✓')};
   document.getElementById('btn-save-acc').onclick=saveAcc;
   document.getElementById('am-del').onclick=delAcc;
+  document.getElementById('btn-save-pot').onclick=savePot;
+  document.getElementById('pm-del').onclick=delPot;
+  document.getElementById('pm-acc').onchange=updatePotCcyHint;
+  document.getElementById('pm-amt').oninput=updatePotPrev;
   document.getElementById('btn-save-cat').onclick=saveCatModal;
   document.getElementById('btn-save-ren').onclick=saveRen;
   document.getElementById('btn-save-settings').onclick=saveSettings;
@@ -1832,6 +2302,10 @@ function bindButtons(){
   };
   document.getElementById('btn-save-exp-cat').onclick=()=>{lsSave();toast('Категории сохранены ✓');if(document.getElementById('pg-expenses').classList.contains('act'))rExp()};
   document.getElementById('btn-save-sav-cat').onclick=()=>{lsSave();toast('Цели сохранены ✓');if(document.getElementById('pg-savings').classList.contains('act'))rSav()};
+  document.getElementById('st-savauto').onchange=function(){
+    D.settings.savAutoClose=this.checked;applyAutoClose();lsSave();
+    rCatEd('ed-sav',D.savCats,'sav');if(document.getElementById('pg-savings').classList.contains('act'))rSav();
+    toast(this.checked?'Авто-закрытие достигнутых целей включено':'Авто-закрытие выключено');};
   document.getElementById('imp-f').onchange=(e)=>{
     const f=e.target.files[0];if(!f)return;
     const r=new FileReader();r.onload=ev=>{
@@ -1847,7 +2321,7 @@ function bindButtons(){
 function rAll(){
   upHdr();
   const id=document.querySelector('.pg.act')?.id?.replace('pg-','');
-  ({overview:rOv,income:rInc,planfact:rPF,expenses:rExp,savings:rSav,accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:rOv,income:rInc,planfact:rPF,expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 
 /* ═══════════════ AUTH GATE ═══════════════ */
@@ -1862,6 +2336,7 @@ function mergeDefaults(obj){
   if(!d.incLog)d.incLog={sn:[],vo:[]};
   if(!d.distTpl)d.distTpl={sn:[],vo:[]};
   if(!d.fact)d.fact={};
+  if(!Array.isArray(d.savPots))d.savPots=[];   // конверты «реального остатка»; старые данные → пустой список
   if(!d.settings)d.settings={snUah:80000,vo1:1900,vo2:1900};
   d.rates={...defData().rates,...(d.rates||{})};   // подмешиваем новые курсы (THB и т.п.) в старые данные
   return d;
