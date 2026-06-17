@@ -191,6 +191,13 @@ select option{background:#fff;color:var(--text)}
 .acc-idr{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;margin-top:3px}
 .acc-ebtn{position:absolute;top:10px;right:10px;background:#fff;border:1px solid var(--brd);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text2);cursor:pointer;transition:all .15s;font-family:inherit;font-weight:600}
 .acc-ebtn:hover{background:var(--acc);color:#fff;border-color:var(--acc)}
+.acc-card[draggable=true]{cursor:grab}
+.acc-card.dragging{opacity:.45;cursor:grabbing}
+.acc-card.drag-over{outline:2px dashed var(--acc);outline-offset:-3px}
+.acc-move{display:flex;gap:4px;justify-content:flex-end;margin-top:11px}
+.acc-mv{width:27px;height:25px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--brd);border-radius:6px;font-size:11px;color:var(--text2);cursor:pointer;font-family:inherit;padding:0;transition:all .15s}
+.acc-mv:hover:not(:disabled){background:var(--acc);color:#fff;border-color:var(--acc)}
+.acc-mv:disabled{opacity:.3;cursor:default}
 .acc-add{background:transparent;border:1px dashed var(--brd2);border-radius:var(--r3);padding:1rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;min-height:130px;transition:all .15s}
 .acc-add:hover{border-color:var(--acc);background:rgba(63,122,209,.03)}
 .acc-add span{font-size:12px;color:var(--text2);font-weight:600}
@@ -1955,16 +1962,22 @@ function rAccTotals(){
 function rAcc(){
   rAccTotals();
   const grid=document.getElementById('acc-grid');
-  grid.innerHTML=D.accounts.map(a=>{
+  const last=D.accounts.length-1;
+  grid.innerHTML=D.accounts.map((a,i)=>{
     const idrActual=toIdr(a.bal,a.ccy);
     const sym=CSYM[a.ccy]||'';
-    return`<div class="acc-card ${a.own==='sn'?'sn':a.own==='vo'?'vo':'jt'}">
+    return`<div class="acc-card ${a.own==='sn'?'sn':a.own==='vo'?'vo':'jt'}" draggable="true" data-id="${a.id}"
+      ondragstart="accDragStart(event,${a.id})" ondragover="accDragOver(event)" ondragleave="accDragLeave(event)" ondrop="accDrop(event,${a.id})" ondragend="accDragEnd(event)">
       <div class="acc-own">${OL[a.own]||a.own}</div>
-      <div class="acc-name">${a.name}</div>
-      <div class="acc-bank">${a.bank}</div>
+      <div class="acc-name">${escapeHtml(a.name)}</div>
+      <div class="acc-bank">${escapeHtml(a.bank)}</div>
       <div class="acc-bal">${sym}${a.bal.toLocaleString('ru')}</div>
       <div class="acc-idr">${fRpA(idrActual)} · ${fUsdA(idrActual)}</div>
       <button class="acc-ebtn" onclick="openEditAcc(${a.id})">✎ изменить</button>
+      <div class="acc-move">
+        <button class="acc-mv" onclick="reorderAcc(${a.id},-1)" ${i===0?'disabled':''} aria-label="Переместить левее" title="Левее">◀</button>
+        <button class="acc-mv" onclick="reorderAcc(${a.id},1)" ${i===last?'disabled':''} aria-label="Переместить правее" title="Правее">▶</button>
+      </div>
     </div>`;}).join('')+
     `<div class="acc-add" onclick="openAddAcc()"><div style="font-size:22px;color:var(--text3)">＋</div><span>Добавить счёт</span></div>`;
 
@@ -2020,6 +2033,34 @@ function delAcc(){
   const id=+document.getElementById('am-id').value;
   D.accounts=D.accounts.filter(a=>a.id!==id);
   lsSave();cm('m-acc');rAcc();upHdr();toast('Счёт удалён');
+}
+/* Порядок счетов — для удобства пользователя. Порядок = порядок в массиве D.accounts.
+   Десктоп: перетаскивание карточек (HTML5 DnD). Везде (вкл. телефон): кнопки ◀ ▶. */
+function reorderAcc(id,dir){
+  const i=D.accounts.findIndex(a=>a.id===id);if(i<0)return;
+  const j=i+dir;if(j<0||j>=D.accounts.length)return;
+  const m=D.accounts.splice(i,1)[0];D.accounts.splice(j,0,m);
+  lsSave();rAcc();
+}
+let _dragAccId=null;
+function accDragStart(ev,id){
+  _dragAccId=id;try{ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',String(id));}catch(e){}
+  const c=ev.currentTarget;setTimeout(()=>c.classList.add('dragging'),0);
+}
+function accDragOver(ev){
+  if(_dragAccId==null)return;ev.preventDefault();ev.dataTransfer.dropEffect='move';
+  const c=ev.currentTarget;if(!c.classList.contains('dragging'))c.classList.add('drag-over');
+}
+function accDragLeave(ev){ev.currentTarget.classList.remove('drag-over');}
+function accDragEnd(){_dragAccId=null;document.querySelectorAll('.acc-card.dragging,.acc-card.drag-over').forEach(e=>e.classList.remove('dragging','drag-over'));}
+function accDrop(ev,targetId){
+  ev.preventDefault();
+  const src=_dragAccId;accDragEnd();
+  if(src==null||src===targetId)return;
+  const from=D.accounts.findIndex(a=>a.id===src),to=D.accounts.findIndex(a=>a.id===targetId);
+  if(from<0||to<0)return;
+  const m=D.accounts.splice(from,1)[0];D.accounts.splice(to,0,m);
+  lsSave();rAcc();
 }
 
 /* ═══════════════ SETTINGS ═══════════════ */
