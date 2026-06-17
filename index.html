@@ -129,6 +129,7 @@ body{font-family:'Manrope',-apple-system,sans-serif;background:var(--bg);color:v
 .prog-tag{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;vertical-align:middle}
 .prog-tag.closed{background:var(--bg5);color:var(--text2)}
 .prog-tag.done{background:rgba(31,157,107,.14);color:var(--green)}
+.prog-tag.plan{background:rgba(63,122,209,.12);color:var(--acc2)}
 
 /* BAR ROW */
 .br{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--brd)}
@@ -703,7 +704,7 @@ select option{background:#fff;color:var(--text)}
         <div id="sav-goals"></div>
       </div>
       <div class="card cp">
-        <div class="ctitle"><span class="l"><span class="dot p"></span>Накопления по месяцам (млн Rp)</span></div>
+        <div class="ctitle"><span class="l"><span class="dot p"></span>План пополнений по месяцам (млн Rp)</span></div>
         <div class="cw" style="height:280px"><canvas id="ch-sav-m"></canvas></div>
       </div>
     </div>
@@ -808,8 +809,8 @@ create policy "anon all" on budget
       <div class="ctitle"><span class="l"><span class="dot p"></span>Цели накоплений</span></div>
       <div id="ed-sav"></div>
       <button class="btn btn-gh btn-sm mt1" id="btn-add-sav-cat">+ Цель</button>
-      <label class="sav-auto"><input type="checkbox" id="st-savauto"> Закрывать цель автоматически при достижении суммы</label>
-      <p style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:.5rem">«Цель, млн Rp» — нужная сумма. «Закрыть» — пометить достигнутую цель завершённой (например, байк куплен): она уйдёт вниз списка и в «Накоплениях», но история останется. Удаление (✕) стирает цель целиком.</p>
+      <label class="sav-auto"><input type="checkbox" id="st-savauto"> Закрывать цель автоматически, когда по ней фактически отложена нужная сумма</label>
+      <p style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:.5rem">«Цель, млн Rp» — нужная сумма. Статус «по плану %» / «📋 план собран» — это сколько <b>планируется</b> отложить (из План/Факт). Фактически отложенное и «🎯 достигнута» считаются по <b>конвертам</b> (подвкладка «Реальный остаток»). «Закрыть» — пометить цель завершённой вручную (например, байк куплен): уйдёт вниз и здесь, и в «Накоплениях», история останется. Удаление (✕) стирает цель целиком.</p>
       <div class="save-row"><button class="btn btn-save" id="btn-save-sav-cat">💾 Сохранить</button></div>
     </div>
   </div>
@@ -1149,13 +1150,17 @@ function tiArr(){return MN.map((_,i)=>D.incCats.reduce((s,c)=>s+(c.plan[i]||0),0
 function teArr(){return MN.map((_,i)=>D.expCats.reduce((s,c)=>s+(c.plan[i]||0),0))}
 function tdArr(){return MN.map((_,i)=>D.debtCats.reduce((s,c)=>s+(c.plan[i]||0),0))}
 function tsArr(){return MN.map((_,i)=>D.savCats.reduce((s,c)=>s+(c.plan[i]||0),0))}
-/* Авто-закрытие целей: если включено в настройках — достигнутые цели помечаются closed.
+function savTot(c){return c.plan.reduce((a,b)=>a+(b||0),0)}   // ПЛАН: сумма плановых пополнений (млн Rp)
+/* ФАКТ: реально отложено под цель = сумма конвертов этой цели (сырые рупии).
+   Достижение цели и авто-закрытие считаются ПО ФАКТУ (конверты ≥ цели), НЕ по плану. */
+function goalRealIdr(c){return (D.savPots||[]).reduce((s,p)=>p.goalId===c.id?s+potIdr(p):s,0);}
+function goalReached(c){return c.target>0&&goalRealIdr(c)>=c.target*1e6;}
+/* Авто-закрытие целей: если включено — ФАКТИЧЕСКИ достигнутые цели помечаются closed.
    Одностороннее (не открывает обратно), вернуть в работу можно вручную кнопкой «Открыть». */
-function savTot(c){return c.plan.reduce((a,b)=>a+(b||0),0)}
 function applyAutoClose(){
   if(!D||!(D.settings&&D.settings.savAutoClose))return false;
   let ch=false;
-  (D.savCats||[]).forEach(c=>{if(c.target>0&&savTot(c)>=c.target&&!c.closed){c.closed=true;ch=true;}});
+  (D.savCats||[]).forEach(c=>{if(goalReached(c)&&!c.closed){c.closed=true;ch=true;}});
   return ch;
 }
 function toIdr(amt,ccy){
@@ -1722,7 +1727,11 @@ function rPots(){
     const pctAll=totIdr>0?(gIdr/totIdr*100).toFixed(1):'0.0';
     const col=isOrphan?'#a8aaa4':(goal.color||'#6f5ae0');
     const closed=goal&&goal.closed;
-    const name=isOrphan?'⚠ Удалённая цель':(escapeHtml(goal.name)+(closed?' <span class="prog-tag closed">✓ закрыто</span>':''));
+    const tgtIdr=(goal&&goal.target>0)?goal.target*1e6:0;            // цель в сырых рупиях
+    const reachedReal=tgtIdr>0&&gIdr>=tgtIdr;                         // ФАКТИЧЕСКИ достигнута
+    const pctGoal=tgtIdr>0?Math.min(Math.round(gIdr/tgtIdr*100),999):null;
+    const doneBadge=(reachedReal&&!closed)?' <span class="prog-tag done">🎯 достигнута</span>':'';
+    const name=isOrphan?'⚠ Удалённая цель':(escapeHtml(goal.name)+(closed?' <span class="prog-tag closed">✓ закрыто</span>':doneBadge));
     const actionBtn=(!isOrphan&&goal&&!closed&&list.length)?` <button class="btn btn-gh btn-sm pot-spend" onclick="spendGoal('${goal.id}')" title="Списать отложенное со счетов и закрыть цель">🎯 Реализовать</button>`:'';
     const rows=list.map(p=>{
       const a=accById(p.accId);const idr=potIdr(p);
@@ -1735,7 +1744,7 @@ function rPots(){
     return`<div class="pot-goal ${closed?'is-closed':''}">
       <div class="pot-goal-h" style="border-left:4px solid ${col}">
         <div class="pot-goal-name">${name}${actionBtn}</div>
-        <div class="pot-goal-tot"><b>${goalCcyStr(list)}</b><span class="pot-goal-conv">${fRpA(gIdr)} · ${fUsdA(gIdr)} · ${pctAll}% от всех денег</span></div>
+        <div class="pot-goal-tot"><b>${goalCcyStr(list)}</b><span class="pot-goal-conv">${fRpA(gIdr)} · ${fUsdA(gIdr)} · ${pctAll}% от всех денег${pctGoal!=null?` · ${pctGoal}% цели`:''}</span></div>
       </div>
       ${rows}
     </div>`;};
@@ -1868,11 +1877,11 @@ function rSav(){
   const ts=tsArr(),ti=tiArr(),maxS=Math.max(...ts)*1.25||100;
   const ordCats=[...D.savCats].sort((a,b)=>(a.closed?1:0)-(b.closed?1:0));   // закрытые цели — вниз
   document.getElementById('sav-kpis').innerHTML=ordCats.map(c=>{
-    const tot=c.plan.reduce((a,b)=>a+b,0),reached=c.target&&tot>=c.target;
+    const tot=c.plan.reduce((a,b)=>a+b,0),planReached=c.target&&tot>=c.target;
     const pct=c.target?Math.min((tot/c.target*100),100).toFixed(0):0;
     const badge=c.closed?'<div class="kpct closed">✓ закрыто</div>'
-      :reached?'<div class="kpct pos">🎯 цель достигнута</div>'
-      :`<div class="kpct ${+pct>=100?'pos':+pct>=50?'neu':'neg'}">${pct}% цели</div>`;
+      :planReached?'<div class="kpct neu">📋 план собран</div>'
+      :`<div class="kpct ${+pct>=50?'neu':'neg'}">по плану ${pct}%</div>`;
     return`<div class="kpi ${c.closed?'kpi-closed':''}" style="border-left:4px solid ${c.color}">
       <div class="kpi-l"><div class="kl">${escapeHtml(c.name)}</div><div class="ks">Цель: ${fRp(c.target)} · <b>${fUsd(tot)}</b></div></div>
       <div class="kpi-r"><div class="kv" style="font-size:16px;color:${ink(c.color)}">${fRp(tot)}</div>
@@ -1881,7 +1890,7 @@ function rSav(){
   document.getElementById('sav-goals').innerHTML=ordCats.map(c=>{
     const tot=c.plan.reduce((a,b)=>a+b,0);const p=c.target?Math.min(tot/c.target*100,100):0;
     const tag=c.closed?'<span class="prog-tag closed">✓ закрыто</span>'
-      :(c.target&&tot>=c.target?'<span class="prog-tag done">🎯 достигнута</span>':'');
+      :(c.target&&tot>=c.target?'<span class="prog-tag plan">📋 план собран</span>':'');
     return`<div class="prog ${c.closed?'is-closed':''}">
       <div class="prog-h"><span class="prog-name">${escapeHtml(c.name)} ${tag}</span>
         <span class="prog-vals"><b>${fRp(tot)}</b> из ${fRp(c.target)}</span></div>
@@ -2141,11 +2150,11 @@ function rSavCatEd(el){
   if(applyAutoClose())autoSave();
   const rows=D.savCats.map((c,i)=>({c,i})).sort((a,b)=>(a.c.closed?1:0)-(b.c.closed?1:0));
   el.innerHTML=rows.map(({c,i})=>{
-    const tot=savTot(c),reached=c.target>0&&tot>=c.target;
+    const tot=savTot(c),planReached=c.target>0&&tot>=c.target;
     const pct=c.target>0?Math.min(Math.round(tot/c.target*100),999):0;
     const stat=c.closed?'<span class="ce-stat closed">✓ закрыто</span>'
-      :reached?'<span class="ce-stat done">🎯 достигнута</span>'
-      :`<span class="ce-stat prog">${pct}% · ${fRp(tot)}</span>`;
+      :planReached?'<span class="ce-stat prog">📋 план собран</span>'
+      :`<span class="ce-stat prog">по плану ${pct}%</span>`;
     const cbtn=c.closed?`<button class="ce-close re" data-i="${i}">↩ Открыть</button>`
       :`<button class="ce-close do" data-i="${i}">✓ Закрыть</button>`;
     return`<div class="sav-ed-row ${c.closed?'is-closed':''}">
