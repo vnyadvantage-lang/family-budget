@@ -2194,8 +2194,8 @@ function rSavCatEd(el){
     const tot=savTot(c),planReached=c.target>0&&tot>=c.target;
     const pct=c.target>0?Math.min(Math.round(tot/c.target*100),999):0;
     const stat=c.closed?'<span class="ce-stat closed">✓ закрыто</span>'
-      :planReached?'<span class="ce-stat prog">📋 план собран</span>'
-      :`<span class="ce-stat prog">по плану ${pct}%</span>`;
+      :planReached?`<span class="ce-stat prog">📋 план собран · ${fRp(tot)}</span>`
+      :`<span class="ce-stat prog">по плану ${pct}% · ${fRp(tot)}</span>`;
     const cbtn=c.closed?`<button class="ce-close re" data-i="${i}">↩ Открыть</button>`
       :`<button class="ce-close do" data-i="${i}">✓ Закрыть</button>`;
     return`<div class="sav-ed-row ${c.closed?'is-closed':''}">
