@@ -1720,6 +1720,8 @@ function potIdr(p){const a=accById(p.accId);return a?toIdr(p.amt||0,a.ccy):0;}  
 function escapeHtml(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function ccyAmt(ccy,amt){const sym=CSYM[ccy]||'';const n=Math.round(amt).toLocaleString('ru');return sym?sym+n:n+' '+ccy;}
 function potNative(p){const a=accById(p.accId);if(!a)return '— счёт удалён';const sym=CSYM[a.ccy]||'';const n=(p.amt||0).toLocaleString('ru');return sym?sym+n:n+' '+a.ccy;}
+function accAmtStr(a,amt){const sym=CSYM[a.ccy]||'';const n=(amt||0).toLocaleString('ru');return sym?sym+n:n+' '+a.ccy;}   // баланс счёта в его валюте
+function accAllocated(a,exclId){return (D.savPots||[]).reduce((s,p)=>(p.accId===a.id&&p.id!==exclId?s+(p.amt||0):s),0);}   // уже отложено в конвертах на этом счёте (искл. редактируемый)
 
 function spSav(tab){
   if(!['plan','pf','real'].includes(tab))tab='plan';
@@ -1861,13 +1863,23 @@ function fillPotSelects(selGoal,selAcc){
   gSel.innerHTML=D.savCats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}${c.closed?' (закрыта)':''}</option>`).join('')||'<option value="">— нет целей —</option>';
   if(selGoal!=null)gSel.value=selGoal;
   const aSel=document.getElementById('pm-acc');
-  aSel.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)} · ${a.ccy} (${escapeHtml((OL[a.own]||'').replace(/^\S+\s/,''))})</option>`).join('')||'<option value="">— нет счетов —</option>';
+  aSel.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)} · ${accAmtStr(a,a.bal)} (${escapeHtml((OL[a.own]||'').replace(/^\S+\s/,''))})</option>`).join('')||'<option value="">— нет счетов —</option>';
   if(selAcc!=null)aSel.value=selAcc;
   updatePotCcyHint();
 }
 function updatePotCcyHint(){
   const a=accById(+document.getElementById('pm-acc').value);
-  const h=document.getElementById('pm-ccyhint');if(h)h.textContent=a?`Сумма вводится в валюте счёта: ${a.ccy}`:'Выберите счёт';
+  const h=document.getElementById('pm-ccyhint');
+  if(h){
+    if(!a){h.textContent='Выберите счёт';}
+    else{
+      const editId=+document.getElementById('pm-id').value||0;
+      const alloc=accAllocated(a,editId), free=(a.bal||0)-alloc;
+      h.innerHTML=`Валюта: <b>${a.ccy}</b> · на счёте: <b>${accAmtStr(a,a.bal)}</b>`
+        +(alloc>0?` · уже в конвертах: ${accAmtStr(a,alloc)}`:'')
+        +` · свободно: <b style="color:${free<0?'var(--red)':'var(--green)'}">${accAmtStr(a,free)}</b>`;
+    }
+  }
   updatePotPrev();
 }
 function updatePotPrev(){
