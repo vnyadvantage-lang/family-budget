@@ -878,7 +878,7 @@ create policy "anon all" on budget
         <option value="UAH">UAH — Гривны</option><option value="USDT">USDT — Tether</option>
         <option value="BTC">BTC — Bitcoin</option><option value="ETH">ETH — Ethereum</option>
       </select></div>
-    <div class="mrow"><label>Баланс</label><input type="number" id="am-bal" step="any"></div>
+    <div class="mrow"><label>Баланс</label><input type="text" inputmode="decimal" id="am-bal"></div>
     <input type="hidden" id="am-id">
     <div class="mfooter">
       <button class="btn btn-gh" onclick="cm('m-acc')">Отмена</button>
@@ -894,7 +894,7 @@ create policy "anon all" on budget
     <div class="mrow"><label>Цель</label><select id="pm-goal"></select></div>
     <div class="mrow"><label>Счёт (определяет валюту)</label><select id="pm-acc"></select>
       <div class="pot-ccyhint" id="pm-ccyhint">Выберите счёт</div></div>
-    <div class="mrow"><label>Сумма (в валюте счёта)</label><input type="number" id="pm-amt" step="any"></div>
+    <div class="mrow"><label>Сумма (в валюте счёта)</label><input type="text" inputmode="decimal" id="pm-amt"></div>
     <div class="mrow"><label>Заметка (необязательно)</label><input type="text" id="pm-note" placeholder="напр. первый взнос"></div>
     <div class="incprev" id="pm-prev">—</div>
     <input type="hidden" id="pm-id">
@@ -1624,14 +1624,14 @@ function pRow(id,label,plan,mi,isExp){
   return`<div class="pf-row">
     <span class="pf-cat">${label}<span class="ri" onclick="openRen('${id}','${typeGuess}','${label.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">✎</span></span>
     <span class="pf-plan">${plan?fRp(plan):'—'}</span>
-    <input class="pf-fi" type="number" value="${f}" placeholder="${plan?fN(plan):''}" step="0.1"
-      onchange="D.fact['${id}_${mi}']=+this.value||0" oninput="pfUpd(this,'${id}',${mi},${plan},${isExp})">
+    <input class="pf-fi" type="text" inputmode="decimal" value="${f}" placeholder="${plan?fN(plan):''}"
+      onchange="D.fact['${id}_${mi}']=parseNum(this.value)" oninput="pfUpd(this,'${id}',${mi},${plan},${isExp})">
     <span class="pf-d ${dc}" id="pfd_${id}_${mi}">${delta!==null?(delta>=0?'+':'')+fRp(Math.abs(delta)):'—'}</span>
     <span class="pf-d ${dc}" id="pfp_${id}_${mi}" style="font-size:10px">${pct!==null?(delta>=0?'+':'')+pct+'%':'—'}</span>
   </div>`;
 }
 function pfUpd(inp,id,mi,plan,isExp){
-  const f=+inp.value||0;D.fact[id+'_'+mi]=f;
+  const f=parseNum(inp.value);D.fact[id+'_'+mi]=f;
   const d=f-plan,pct=plan>0?((d/plan)*100).toFixed(0):null;
   const dc=isExp?(d>0?'dn':'dp'):(d>=0?'dp':'dn');
   const de=document.getElementById('pfd_'+id+'_'+mi);
@@ -1718,6 +1718,9 @@ function accById(id){return D.accounts.find(a=>a.id===id);}
 function goalById(id){return D.savCats.find(c=>c.id===id);}
 function potIdr(p){const a=accById(p.accId);return a?toIdr(p.amt||0,a.ccy):0;}   // счёт удалён → 0, не NaN
 function escapeHtml(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* Парсер чисел: принимает и запятую, и точку как десятичный разделитель, игнорирует пробелы
+   (рус. раскладка → «43,5» или «43 500,5»). Для полей сумм (type=text inputmode=decimal). */
+function parseNum(v){return +String(v==null?'':v).replace(/\s/g,'').replace(',','.')||0;}
 function ccyAmt(ccy,amt){const sym=CSYM[ccy]||'';const n=Math.round(amt).toLocaleString('ru');return sym?sym+n:n+' '+ccy;}
 function potNative(p){const a=accById(p.accId);if(!a)return '— счёт удалён';const sym=CSYM[a.ccy]||'';const n=(p.amt||0).toLocaleString('ru');return sym?sym+n:n+' '+a.ccy;}
 function accAmtStr(a,amt){const sym=CSYM[a.ccy]||'';const n=(amt||0).toLocaleString('ru');return sym?sym+n:n+' '+a.ccy;}   // баланс счёта в его валюте
@@ -1884,7 +1887,7 @@ function updatePotCcyHint(){
 }
 function updatePotPrev(){
   const a=accById(+document.getElementById('pm-acc').value);
-  const amt=+document.getElementById('pm-amt').value||0;
+  const amt=parseNum(document.getElementById('pm-amt').value);
   const el=document.getElementById('pm-prev');if(!el)return;
   el.innerHTML=a?`≈ <b>${fRpA(toIdr(amt,a.ccy))}</b> · ${fUsdA(toIdr(amt,a.ccy))}`:'—';
 }
@@ -1917,7 +1920,7 @@ function savePot(){
   const id=document.getElementById('pm-id').value;
   const goalId=document.getElementById('pm-goal').value;
   const accId=+document.getElementById('pm-acc').value;
-  const amt=Math.max(0,+document.getElementById('pm-amt').value||0);
+  const amt=Math.max(0,parseNum(document.getElementById('pm-amt').value));
   if(!goalId||!goalById(goalId)){toast('Выберите существующую цель','err');return;}
   if(!accId||!accById(accId)){toast('Выберите существующий счёт','err');return;}
   const p={id:id?+id:Date.now(),goalId,accId,amt,note:document.getElementById('pm-note').value.trim()};
@@ -2097,7 +2100,7 @@ function saveAcc(){
     name:document.getElementById('am-name').value||'Счёт',
     bank:document.getElementById('am-bank').value||'—',
     ccy:document.getElementById('am-ccy').value,
-    bal:+document.getElementById('am-bal').value||0};
+    bal:parseNum(document.getElementById('am-bal').value)};
   if(id){const i=D.accounts.findIndex(x=>x.id===+id);if(i>=0)D.accounts[i]=a;else D.accounts.push(a)}
   else D.accounts.push(a);
   lsSave();cm('m-acc');rAcc();upHdr();toast('Счёт сохранён ✓');
@@ -2282,7 +2285,7 @@ function rSavCatEd(el){
       </div>
       <div class="sav-ed-bot">
         <label>Цель, млн Rp</label>
-        <input type="number" class="ce-tgt" value="${c.target||0}" data-i="${i}" step="any">
+        <input type="text" inputmode="decimal" class="ce-tgt" value="${c.target||0}" data-i="${i}">
         ${stat}${cbtn}
       </div>
     </div>`;}).join('');
@@ -2291,7 +2294,7 @@ function rSavCatEd(el){
   el.querySelectorAll('.ce-color').forEach(inp=>inp.addEventListener('change',e=>{
     D.savCats[+e.target.dataset.i].color=e.target.value;lsSave();rerender();}));
   el.querySelectorAll('.ce-tgt').forEach(inp=>inp.addEventListener('change',e=>{
-    D.savCats[+e.target.dataset.i].target=+e.target.value||0;lsSave();rerender();}));
+    D.savCats[+e.target.dataset.i].target=Math.max(0,parseNum(e.target.value));lsSave();rerender();}));
   el.querySelectorAll('.ce-close').forEach(btn=>btn.addEventListener('click',e=>{
     const c=D.savCats[+e.currentTarget.dataset.i];c.closed=!c.closed;lsSave();rerender();
     toast(c.closed?'«'+c.name+'» — цель закрыта ✓':'«'+c.name+'» — цель снова активна');}));
