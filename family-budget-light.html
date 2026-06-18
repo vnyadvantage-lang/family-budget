@@ -282,6 +282,24 @@ select option{background:#fff;color:var(--text)}
 .yi{width:100%;min-width:48px;border:1px solid transparent;background:transparent;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;padding:3px 4px;border-radius:5px;outline:none;font-variant-numeric:tabular-nums;transition:border-color .12s,background .12s}
 .yi:hover{border-color:var(--brd2)}
 .yi:focus{border-color:var(--acc);background:#fff;color:var(--text);box-shadow:0 0 0 2px rgba(63,122,209,.12)}
+/* ── Годовые таблицы: разделение блоков (Доходы/Расходы/Долги/Накопления) + итоги + проверка ── */
+.pf-ytbl .ysec td{font-weight:800;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;padding:9px 11px;color:#fff}
+.pf-ytbl .ysec-g td{background:var(--green)!important;box-shadow:inset 5px 0 0 rgba(0,0,0,.18)}
+.pf-ytbl .ysec-r td{background:var(--red)!important;box-shadow:inset 5px 0 0 rgba(0,0,0,.18)}
+.pf-ytbl .ysec-a td{background:var(--amber)!important;box-shadow:inset 5px 0 0 rgba(0,0,0,.18)}
+.pf-ytbl .ysec-p td{background:var(--indigo)!important;box-shadow:inset 5px 0 0 rgba(0,0,0,.18)}
+.pf-ytbl .ytot td{font-weight:700;border-top:2px solid var(--brd2);border-bottom:2px solid var(--brd2)}
+.pf-ytbl .ytot td:first-child{font-weight:800}
+.pf-ytbl .ytot-g td{background:rgba(31,157,107,.10)!important}.pf-ytbl .ytot-g td:first-child{color:#15784f}
+.pf-ytbl .ytot-r td{background:rgba(224,83,61,.10)!important}.pf-ytbl .ytot-r td:first-child{color:#b53f2c}
+.pf-ytbl .ytot-a td{background:rgba(207,133,0,.12)!important}.pf-ytbl .ytot-a td:first-child{color:#9c6600}
+.pf-ytbl .ytot-p td{background:rgba(111,90,224,.10)!important}.pf-ytbl .ytot-p td:first-child{color:#574bb0}
+.pf-ytbl .ybal td{background:#12161d!important;color:#c9d2df;font-weight:700;border-color:rgba(255,255,255,.06);padding:11px 8px}
+.pf-ytbl .ybal td:first-child{color:#fff;font-weight:800;border-left:5px solid var(--acc)}
+.pf-ytbl .ybal td.cm{background:#1b2433!important}
+.pf-ytbl .ybal td.bal-pos{color:#f4b34e!important}
+.pf-ytbl .ybal td.bal-neg{color:#ff8068!important}
+.pf-ytbl .ybal td.bal-zero{color:#5fd6a4!important}
 .pf-d{font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;font-weight:700}
 .dp{color:var(--green)}.dn{color:var(--red)}
 .pf-sum-g{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.2rem}
@@ -720,7 +738,7 @@ select option{background:#fff;color:var(--text)}
       <div class="ctitle"><span class="l"><span class="dot g"></span>План на весь год — все статьи</span>
         <button class="btn btn-save btn-sm" id="btn-save-py">💾 Сохранить</button>
       </div>
-      <p class="pf-yhint">Все суммы — в <b>млн&nbsp;Rp</b>. Редактируйте любую ячейку: строки — статьи доходов, расходов, долгов и накоплений; столбцы — месяцы. Текущий месяц подсвечен. «Итого» считается автоматически.</p>
+      <p class="pf-yhint">Все суммы — в <b>млн&nbsp;Rp</b>, можно дробные (например <b>19,5</b> — запятая или точка). Редактируйте любую ячейку: блоки доходов, расходов, долгов и накоплений разделены цветом; столбцы — месяцы. «Итого» по каждому блоку и нижняя строка <b>«Не распределено»</b> (Доходы − Расходы − Долги − Накопления) считаются автоматически: <span style="color:#c9962e">+</span> — ещё не распланировано, <span style="color:#d2604a">−</span> — перерасход, 0 — всё сошлось.</p>
       <div class="tw"><table class="tbl pf-ytbl" id="pf-plan-tbl"></table></div>
     </div>
   </div>
@@ -730,7 +748,7 @@ select option{background:#fff;color:var(--text)}
       <div class="ctitle"><span class="l"><span class="dot r"></span>Факт за весь год — все статьи</span>
         <button class="btn btn-save btn-sm" id="btn-save-fy">💾 Сохранить</button>
       </div>
-      <p class="pf-yhint">Все суммы — в <b>млн&nbsp;Rp</b>. Редактируйте любую ячейку — фактические суммы по месяцам. Текущий месяц подсвечен. «Итого» считается автоматически.</p>
+      <p class="pf-yhint">Все суммы — в <b>млн&nbsp;Rp</b>, можно дробные (например <b>30,75</b> — запятая или точка). Редактируйте любую ячейку — фактические суммы по месяцам; блоки разделены цветом. «Итого» по каждому блоку и нижняя строка <b>«Не распределено»</b> (Доходы − Расходы − Долги − Накопления) считаются автоматически: <span style="color:#c9962e">+</span> — осталось свободным, <span style="color:#d2604a">−</span> — перерасход, 0 — всё сошлось.</p>
       <div class="tw"><table class="tbl pf-ytbl" id="pf-fact-tbl"></table></div>
     </div>
   </div>
@@ -1772,46 +1790,64 @@ function pfPlanUpd(inp,id,mi,isExp){
   pfRowDelta(id,mi,isExp);pfSums();autoSave();
 }
 /* ───── План/Факт «на год»: все статьи × 12 месяцев, редактируемо.
-   kind='plan' пишет в cat.plan[mi]; kind='fact' пишет в D.fact['id_mi']. Всё в млн Rp. */
+   kind='plan' пишет в cat.plan[mi]; kind='fact' пишет в D.fact['id_mi']. Всё в млн Rp.
+   Числа показываем с запятой (рус.), ввод принимает и запятую, и точку (parseNum). */
+function fNc(n){return String(fN(n,2)).replace('.',',');}          // число → строка с запятой
+function yval(v){return v?String(fN(v,2)).replace('.',','):'';}    // значение поля (0 → пусто, плейсхолдер)
+function balTxt(b){return Math.abs(b)<0.005?'0':(b>0?'+':'−')+fNc(Math.abs(b));}
+function balCls(b){return Math.abs(b)<0.005?'bal-zero':(b>0?'bal-pos':'bal-neg');}
 function rPFYear(kind){
   const isPlan=kind==='plan';
   const tbl=document.getElementById(isPlan?'pf-plan-tbl':'pf-fact-tbl');if(!tbl)return;
   const secs=[
-    {name:'Доходы',cats:D.incCats},
-    {name:'Расходы',cats:D.expCats},
-    {name:'Долги / обязательства',cats:D.debtCats},
-    {name:'Накопления',cats:D.savCats}
+    {name:'Доходы',cats:D.incCats,c:'g'},
+    {name:'Расходы',cats:D.expCats,c:'r'},
+    {name:'Долги / обязательства',cats:D.debtCats,c:'a'},
+    {name:'Накопления',cats:D.savCats,c:'p'}
   ];
   const hdr=`<thead><tr><th>${isPlan?'Статья · план':'Статья · факт'}</th>${MN.map((m,i)=>`<th class="${i===CM?'cm':''}">${m}${i===CM?' ●':''}</th>`).join('')}<th>Итого</th></tr></thead>`;
   let body='';
   secs.forEach((sec,si)=>{
     if(!sec.cats.length)return;
-    body+=`<tr class="tsec"><td colspan="14">${escapeHtml(sec.name)}</td></tr>`;
+    body+=`<tr class="ysec ysec-${sec.c}"><td colspan="14">${escapeHtml(sec.name)}</td></tr>`;
     sec.cats.forEach(c=>{
       let rowTot=0;
       const cells=MN.map((_,i)=>{
         const v=isPlan?(c.plan[i]||0):(+D.fact[c.id+'_'+i]||0);rowTot+=v;
-        return`<td class="${i===CM?'cm':''}"><input class="yi" type="text" inputmode="decimal" value="${v||''}" placeholder="0" oninput="pfYearUpd('${kind}','${c.id}',${i},this)"></td>`;
+        return`<td class="${i===CM?'cm':''}"><input class="yi" type="text" inputmode="decimal" value="${yval(v)}" placeholder="0" oninput="pfYearUpd('${kind}','${c.id}',${i},this)"></td>`;
       }).join('');
-      body+=`<tr><td style="${c.color?'color:'+ink(c.color):''}">${escapeHtml(c.name)}</td>${cells}<td class="hi" id="yt_${kind}_${c.id}">${rowTot?fN(rowTot,2):'—'}</td></tr>`;
+      body+=`<tr class="ycat"><td style="${c.color?'color:'+ink(c.color):''}">${escapeHtml(c.name)}</td>${cells}<td class="hi" id="yt_${kind}_${c.id}">${rowTot?fNc(rowTot):'—'}</td></tr>`;
     });
-    body+=`<tr class="ttot"><td>Итого: ${escapeHtml(sec.name.toLowerCase())}</td>${MN.map((_,i)=>`<td class="${i===CM?'cm':''}" id="ys_${kind}_${si}_${i}"></td>`).join('')}<td class="hi" id="ysg_${kind}_${si}"></td></tr>`;
+    body+=`<tr class="ytot ytot-${sec.c}"><td>Итого · ${escapeHtml(sec.name)}</td>${MN.map((_,i)=>`<td class="${i===CM?'cm':''}" id="ys_${kind}_${si}_${i}"></td>`).join('')}<td id="ysg_${kind}_${si}"></td></tr>`;
   });
+  // строка-проверка: «Не распределено» = Доходы − Расходы − Долги − Накопления (по каждому месяцу + за год)
+  body+=`<tr class="ybal"><td>Не распределено</td>${MN.map((_,i)=>`<td class="${i===CM?'cm':''}" id="yb_${kind}_${i}"></td>`).join('')}<td id="ybg_${kind}"></td></tr>`;
   tbl.innerHTML=hdr+'<tbody>'+body+'</tbody>';
   pfYearTotals(kind);
 }
 function pfYearTotals(kind){
   const isPlan=kind==='plan';
+  const secMonth=[];   // [si][month] = сумма блока за месяц
   [D.incCats,D.expCats,D.debtCats,D.savCats].forEach((cats,si)=>{
     const secTot=Array(12).fill(0);
     cats.forEach(c=>{
       let rowTot=0;
       for(let i=0;i<12;i++){const v=isPlan?(c.plan[i]||0):(+D.fact[c.id+'_'+i]||0);rowTot+=v;secTot[i]+=v;}
-      const rt=document.getElementById('yt_'+kind+'_'+c.id);if(rt)rt.textContent=rowTot?fN(rowTot,2):'—';
+      const rt=document.getElementById('yt_'+kind+'_'+c.id);if(rt)rt.textContent=rowTot?fNc(rowTot):'—';
     });
-    for(let i=0;i<12;i++){const el=document.getElementById('ys_'+kind+'_'+si+'_'+i);if(el)el.textContent=secTot[i]?fN(secTot[i],2):'—';}
-    const g=document.getElementById('ysg_'+kind+'_'+si);if(g){const t=secTot.reduce((a,b)=>a+b,0);g.textContent=t?fN(t,2):'—';}
+    secMonth[si]=secTot;
+    for(let i=0;i<12;i++){const el=document.getElementById('ys_'+kind+'_'+si+'_'+i);if(el)el.textContent=secTot[i]?fNc(secTot[i]):'—';}
+    const g=document.getElementById('ysg_'+kind+'_'+si);if(g){const t=secTot.reduce((a,b)=>a+b,0);g.textContent=t?fNc(t):'—';}
   });
+  // строка-проверка
+  let balG=0;
+  for(let i=0;i<12;i++){
+    const b=+(secMonth[0][i]-secMonth[1][i]-secMonth[2][i]-secMonth[3][i]).toFixed(2);balG+=b;
+    const el=document.getElementById('yb_'+kind+'_'+i);
+    if(el){el.textContent=balTxt(b);el.className=balCls(b)+(i===CM?' cm':'');}
+  }
+  balG=+balG.toFixed(2);
+  const gg=document.getElementById('ybg_'+kind);if(gg){gg.textContent=balTxt(balG);gg.className=balCls(balG);}
 }
 function pfYearUpd(kind,id,mi,inp){
   const v=parseNum(inp.value);
