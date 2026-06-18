@@ -201,6 +201,18 @@ select option{background:#fff;color:var(--text)}
 .acc-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
 .acc-hint{font-size:11.5px;color:var(--text2)}
 .acc-hint b{color:var(--text);font-weight:700}
+/* Редактор вкладок меню (Настройки) */
+.nav-ed-row{display:flex;align-items:center;gap:9px;padding:7px 8px;border:1px solid var(--brd);border-radius:10px;background:#fff;margin-bottom:7px;transition:border-color .12s,box-shadow .12s,opacity .12s}
+.nav-ed-row:last-child{margin-bottom:0}
+.nav-ed-row.dragging{opacity:.45;cursor:grabbing}
+.nav-ed-row.drag-over{outline:2px dashed var(--acc);outline-offset:-3px}
+.nav-grip{color:var(--text3);cursor:grab;font-size:15px;line-height:1;user-select:none;flex:none}
+.nav-ord{display:flex;flex-direction:column;gap:2px;flex:none}
+.ord-b{width:26px;height:18px;display:flex;align-items:center;justify-content:center;padding:0;font-size:10px;border:1px solid var(--brd2);background:var(--bg3);color:var(--text2);border-radius:5px;cursor:pointer;font-family:inherit}
+.ord-b:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+.ord-b:disabled{opacity:.3;cursor:default}
+.nav-lbl{flex:1;min-width:0;border:1px solid var(--brd2);border-radius:7px;padding:7px 10px;font-size:13px;font-weight:600;color:var(--text);font-family:inherit;outline:none;transition:border-color .12s,box-shadow .12s}
+.nav-lbl:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(63,122,209,.12)}
 .acc-card.reordering{border-style:dashed;border-color:var(--brd3)}
 .acc-add{background:transparent;border:1px dashed var(--brd2);border-radius:var(--r3);padding:1rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;min-height:130px;transition:all .15s}
 .acc-add:hover{border-color:var(--acc);background:rgba(63,122,209,.03)}
@@ -261,6 +273,15 @@ select option{background:#fff;color:var(--text)}
 .pf-plan{font-family:'JetBrains Mono',monospace;color:var(--text2);text-align:right;font-size:11px}
 .pf-fi{background:#fff;border:1px solid var(--brd2);border-radius:6px;color:var(--text);font-size:11px;font-family:'JetBrains Mono',monospace;padding:5px 7px;text-align:right;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
 .pf-fi:focus{border-color:var(--acc);box-shadow:0 0 0 2px rgba(63,122,209,.1)}
+.pf-pi{background:var(--bg3);color:var(--text2);border-color:var(--brd)}
+.pf-pi:focus{background:#fff;color:var(--text)}
+.pf-yhint{font-size:11px;color:var(--text3);line-height:1.5;margin:.1rem 0 .9rem}
+.tbl.pf-ytbl{min-width:880px}
+.tbl.pf-ytbl td{padding:3px 4px}
+.tbl.pf-ytbl td:first-child{padding:7px 8px}
+.yi{width:100%;min-width:48px;border:1px solid transparent;background:transparent;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;padding:3px 4px;border-radius:5px;outline:none;font-variant-numeric:tabular-nums;transition:border-color .12s,background .12s}
+.yi:hover{border-color:var(--brd2)}
+.yi:focus{border-color:var(--acc);background:#fff;color:var(--text);box-shadow:0 0 0 2px rgba(63,122,209,.12)}
 .pf-d{font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;font-weight:700}
 .dp{color:var(--green)}.dn{color:var(--red)}
 .pf-sum-g{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.2rem}
@@ -516,7 +537,8 @@ select option{background:#fff;color:var(--text)}
 </header>
 
 <nav class="nav-wrap">
-<div class="nav">
+<div class="nav" id="nav">
+  <!-- кнопки рендерятся динамически из D.nav (renderNav); статичный список — фолбэк до загрузки данных -->
   <button class="nbtn nb-ov act" onclick="sp('overview',this)">📊 Обзор</button>
   <button class="nbtn nb-inc" onclick="sp('income',this)">💰 Доходы</button>
   <button class="nbtn nb-pf" onclick="sp('planfact',this)">📋 План/Факт</button>
@@ -639,6 +661,13 @@ select option{background:#fff;color:var(--text)}
 
 <!-- PLAN/FACT -->
 <div id="pg-planfact" class="pg">
+  <div id="pf-subnav" class="subnav">
+    <button class="subtab act" data-tab="month" onclick="spPF('month')">📋 По месяцу</button>
+    <button class="subtab" data-tab="planyear" onclick="spPF('planyear')">📅 План на год</button>
+    <button class="subtab" data-tab="factyear" onclick="spPF('factyear')">📊 Факт на год</button>
+  </div>
+
+  <div id="pf-pane-month">
   <div class="ms" id="pf-ms"></div>
   <div class="pf-sum-g" id="pf-sums"></div>
   <div class="g2 mb2">
@@ -678,6 +707,27 @@ select option{background:#fff;color:var(--text)}
   </div>
   <div class="save-row">
     <button class="btn btn-save" id="btn-save-pf">💾 Сохранить все факты</button>
+  </div>
+  </div><!-- /pf-pane-month -->
+
+  <div id="pf-pane-planyear" style="display:none">
+    <div class="card cg">
+      <div class="ctitle"><span class="l"><span class="dot g"></span>План на весь год — все статьи</span>
+        <button class="btn btn-save btn-sm" id="btn-save-py">💾 Сохранить</button>
+      </div>
+      <p class="pf-yhint">Все суммы — в <b>млн&nbsp;Rp</b>. Редактируйте любую ячейку: строки — статьи доходов, расходов, долгов и накоплений; столбцы — месяцы. Текущий месяц подсвечен. «Итого» считается автоматически.</p>
+      <div class="tw"><table class="tbl pf-ytbl" id="pf-plan-tbl"></table></div>
+    </div>
+  </div>
+
+  <div id="pf-pane-factyear" style="display:none">
+    <div class="card cr">
+      <div class="ctitle"><span class="l"><span class="dot r"></span>Факт за весь год — все статьи</span>
+        <button class="btn btn-save btn-sm" id="btn-save-fy">💾 Сохранить</button>
+      </div>
+      <p class="pf-yhint">Все суммы — в <b>млн&nbsp;Rp</b>. Редактируйте любую ячейку — фактические суммы по месяцам. Текущий месяц подсвечен. «Итого» считается автоматически.</p>
+      <div class="tw"><table class="tbl pf-ytbl" id="pf-fact-tbl"></table></div>
+    </div>
   </div>
 </div>
 
@@ -766,6 +816,13 @@ select option{background:#fff;color:var(--text)}
 
 <!-- SETTINGS -->
 <div id="pg-settings" class="pg">
+  <div class="card cb mb2">
+    <div class="ctitle"><span class="l"><span class="dot b"></span>Вкладки меню — порядок и названия</span>
+      <button class="btn btn-gh btn-sm" onclick="resetNav()">↺ Сбросить</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--text3);line-height:1.5;margin-bottom:.8rem">Перетащите строку мышью или используйте <b>▲ ▼</b>, чтобы изменить порядок вкладок в верхнем меню. Текст в поле — это название вкладки (можно менять и эмодзи). Изменения сразу видны вверху и сохраняются автоматически.</p>
+    <div id="ed-nav"></div>
+  </div>
   <div class="g2 mb2">
     <div class="card cp">
       <div class="ctitle"><span class="l"><span class="dot p"></span>Зарплаты — план</span></div>
@@ -983,10 +1040,42 @@ const LSK='bali_v5';
 const BCLRS=['#3f7ad1','#1f9d6b','#d6336c','#cf8500','#e0603a','#0d9488','#6f5ae0','#5b9bd5','#16a34a','#db6c4e','#8472ec','#3aa0c9'];
 const CC={g:'#1f9d6b',r:'#e0603a',a:'#cf8500',p:'#6f5ae0',p2:'#8472ec',t:'#0d9488',pk:'#d6336c',b:'#5b9bd5'};
 
+/* ═══════════════ НАВИГАЦИЯ (вкладки меню) ═══════════════
+   id фиксированы (привязаны к страницам pg-<id> и диспетчеру sp()); пользователь меняет
+   только ПОРЯДОК и НАЗВАНИЕ (label, включая эмодзи). cls — фикс-класс для активного цвета. */
+const NAV_DEF=[
+  {id:'overview',label:'📊 Обзор',cls:'nb-ov'},
+  {id:'income',label:'💰 Доходы',cls:'nb-inc'},
+  {id:'planfact',label:'📋 План/Факт',cls:'nb-pf'},
+  {id:'expenses',label:'💸 Расходы',cls:'nb-exp'},
+  {id:'savings',label:'🏦 Накопления',cls:'nb-sav'},
+  {id:'accounts',label:'💳 Счета',cls:'nb-acc'},
+  {id:'settings',label:'⚙ Настройки',cls:'nb-set'}
+];
+const NAV_CLS=Object.fromEntries(NAV_DEF.map(n=>[n.id,n.cls]));
+const NAV_DEFLABEL=Object.fromEntries(NAV_DEF.map(n=>[n.id,n.label]));
+function defNav(){return NAV_DEF.map(n=>({id:n.id,label:n.label}));}
+/* Гарантирует ровно 7 валидных вкладок: фильтрует неизвестные id, убирает дубли, сохраняет
+   пользовательский порядок/названия, добавляет недостающие в каноническом порядке (на случай
+   старых/частичных данных или будущей новой вкладки). Пустой label → стандартный. */
+function reconcileNav(arr){
+  const known=new Set(NAV_DEF.map(n=>n.id)),seen=new Set(),out=[];
+  (Array.isArray(arr)?arr:[]).forEach(n=>{
+    if(n&&known.has(n.id)&&!seen.has(n.id)){
+      seen.add(n.id);
+      const lbl=(typeof n.label==='string'&&n.label.trim())?n.label:NAV_DEFLABEL[n.id];
+      out.push({id:n.id,label:lbl});
+    }
+  });
+  NAV_DEF.forEach(n=>{if(!seen.has(n.id))out.push({id:n.id,label:n.label});});
+  return out;
+}
+
 /* ═══════════════ DEFAULT DATA ═══════════════ */
 function defData(){
   return{
     rates:{usdIdr:17000,uahIdr:400,usdtUsd:1,thbIdr:580},
+    nav:defNav(),
     settings:{snUah:80000,vo1:1900,vo2:1900,savAutoClose:false},
     accounts:[
       {id:1,own:'sn',name:'Monobank UAH',bank:'Monobank',ccy:'UAH',bal:15000},
@@ -1268,7 +1357,19 @@ function sp(id,btn){
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
   document.getElementById('pg-'+id).classList.add('act');
   if(btn)btn.classList.add('act');
-  ({overview:rOv,income:rInc,planfact:rPF,expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:rOv,income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+}
+/* Рендер верхнего меню из D.nav (порядок + названия пользователя). Активную вкладку берём
+   из текущей открытой страницы (.pg.act). cls (nb-ov…) сохраняет фикс-цвет активной вкладки. */
+function renderNav(){
+  const el=document.getElementById('nav');if(!el)return;
+  const list=(D&&Array.isArray(D.nav)&&D.nav.length)?D.nav:defNav();
+  const cur=document.querySelector('.pg.act')?.id?.replace('pg-','')||'overview';
+  el.innerHTML=list.map(n=>{
+    const cls=NAV_CLS[n.id]||'';
+    const lbl=(typeof n.label==='string'&&n.label.trim())?n.label:NAV_DEFLABEL[n.id];
+    return`<button class="nbtn ${cls}${n.id===cur?' act':''}" onclick="sp('${n.id}',this)">${escapeHtml(lbl)}</button>`;
+  }).join('');
 }
 
 /* ═══════════════ HEADER ═══════════════ */
@@ -1589,10 +1690,27 @@ function rIncTbl(){
 
 /* ═══════════════ PLAN/FACT ═══════════════ */
 let pfM=CM;
+let _pfTab='month';   // подвкладка План/Факт: month | planyear | factyear
+function spPF(tab){
+  if(!['month','planyear','factyear'].includes(tab))tab='month';
+  _pfTab=tab;
+  const panes={month:'pf-pane-month',planyear:'pf-pane-planyear',factyear:'pf-pane-factyear'};
+  Object.entries(panes).forEach(([t,id])=>{const el=document.getElementById(id);if(el)el.style.display=t===tab?'':'none';});
+  document.querySelectorAll('#pf-subnav .subtab').forEach(b=>b.classList.toggle('act',b.dataset.tab===tab));
+  if(tab==='month')rPF();else rPFYear(tab==='planyear'?'plan':'fact');
+}
 function rPF(){
+  const mi=pfM;
   document.getElementById('pf-ms').innerHTML=MN.map((m,i)=>
     `<button class="mb${i===pfM?' act':''}${i===CM?' cur':''}" onclick="pfM=${i};rPF()">${m}${i===CM?' ●':''}</button>`).join('');
   document.getElementById('pf-mlbl').textContent=MN[pfM]+' 2026';
+  pfSums();
+  document.getElementById('pf-inc').innerHTML=D.incCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,false)).join('');
+  document.getElementById('pf-exp').innerHTML=D.expCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,true)).join('');
+  document.getElementById('pf-debt').innerHTML=D.debtCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,true)).join('');
+  document.getElementById('pf-sav').innerHTML=D.savCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,false)).join('');
+}
+function pfSums(){
   const mi=pfM,ti=tiArr(),te=teArr(),ts=tsArr(),td=tdArr();
   const gf=id=>D.fact[id+'_'+mi]??null;
   const sf=ids=>{let s=0,any=false;ids.forEach(id=>{const f=gf(id);if(f!==null){s+=f;any=true}});return any?s:null};
@@ -1601,10 +1719,6 @@ function rPF(){
     pSum('Расходы',te[mi],sf(D.expCats.map(c=>c.id)),'r')+
     pSum('Накопления',ts[mi],sf(D.savCats.map(c=>c.id)),'p')+
     pSum('Долги',td[mi],sf(D.debtCats.map(c=>c.id)),'a');
-  document.getElementById('pf-inc').innerHTML=D.incCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,false)).join('');
-  document.getElementById('pf-exp').innerHTML=D.expCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,true)).join('');
-  document.getElementById('pf-debt').innerHTML=D.debtCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,true)).join('');
-  document.getElementById('pf-sav').innerHTML=D.savCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,false)).join('');
 }
 function pSum(lbl,plan,fact,c){
   const hF=fact!==null;const d=hF?fact-plan:null;
@@ -1615,30 +1729,90 @@ function pSum(lbl,plan,fact,c){
     <div class="pf-sum-f kv ${hF?c:''}">${hF?fRp(fact):'нет данных'}</div>
     ${d!==null?`<div class="pf-sum-d ${dc}">${d>=0?'+':''}${fRp(Math.abs(d))} (${pct}%)</div>`:''}</div>`;
 }
+function pfCat(id){return D.incCats.find(c=>c.id===id)||D.expCats.find(c=>c.id===id)||D.savCats.find(c=>c.id===id)||D.debtCats.find(c=>c.id===id);}
 function pRow(id,label,plan,mi,isExp){
   const f=D.fact[id+'_'+mi]??'';
-  const delta=f!==''?+f-plan:null;
+  const delta=f!==''?+f-(plan||0):null;
   const pct=delta!==null&&plan>0?((delta/plan)*100).toFixed(0):null;
   const dc=delta===null?'':(isExp?(delta>0?'dn':'dp'):(delta>=0?'dp':'dn'));
   const typeGuess=D.incCats.find(c=>c.id===id)?'inc':D.expCats.find(c=>c.id===id)?'exp':D.savCats.find(c=>c.id===id)?'sav':'debt';
   return`<div class="pf-row">
     <span class="pf-cat">${label}<span class="ri" onclick="openRen('${id}','${typeGuess}','${label.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">✎</span></span>
-    <span class="pf-plan">${plan?fRp(plan):'—'}</span>
+    <input class="pf-fi pf-pi" type="text" inputmode="decimal" value="${plan||''}" placeholder="0"
+      oninput="pfPlanUpd(this,'${id}',${mi},${isExp})" title="План, млн Rp">
     <input class="pf-fi" type="text" inputmode="decimal" value="${f}" placeholder="${plan?fN(plan):''}"
-      onchange="D.fact['${id}_${mi}']=parseNum(this.value)" oninput="pfUpd(this,'${id}',${mi},${plan},${isExp})">
+      oninput="pfUpd(this,'${id}',${mi},${isExp})" title="Факт, млн Rp">
     <span class="pf-d ${dc}" id="pfd_${id}_${mi}">${delta!==null?(delta>=0?'+':'')+fRp(Math.abs(delta)):'—'}</span>
     <span class="pf-d ${dc}" id="pfp_${id}_${mi}" style="font-size:10px">${pct!==null?(delta>=0?'+':'')+pct+'%':'—'}</span>
   </div>`;
 }
-function pfUpd(inp,id,mi,plan,isExp){
-  const f=parseNum(inp.value);D.fact[id+'_'+mi]=f;
-  const d=f-plan,pct=plan>0?((d/plan)*100).toFixed(0):null;
-  const dc=isExp?(d>0?'dn':'dp'):(d>=0?'dp':'dn');
+// Пересчёт Δ/% одной строки помесячного вида: план берём из категории, факт — из D.fact.
+function pfRowDelta(id,mi,isExp){
+  const cat=pfCat(id);const plan=cat?(cat.plan[mi]||0):0;
+  const fr=D.fact[id+'_'+mi];const has=fr!==undefined&&fr!==null&&fr!=='';
+  const d=has?(+fr-plan):null;
+  const pct=d!==null&&plan>0?((d/plan)*100).toFixed(0):null;
+  const dc=d===null?'':(isExp?(d>0?'dn':'dp'):(d>=0?'dp':'dn'));
   const de=document.getElementById('pfd_'+id+'_'+mi);
   const pe=document.getElementById('pfp_'+id+'_'+mi);
-  if(de){de.className='pf-d '+dc;de.textContent=(d>=0?'+':'')+fRp(Math.abs(d))}
-  if(pe){pe.className='pf-d '+dc;pe.textContent=pct?(d>=0?'+':'')+pct+'%':'—'}
-  autoSave();
+  if(de){de.className='pf-d '+dc;de.textContent=d!==null?(d>=0?'+':'')+fRp(Math.abs(d)):'—';}
+  if(pe){pe.className='pf-d '+dc;pe.textContent=pct!==null?(d>=0?'+':'')+pct+'%':'—';}
+}
+function pfUpd(inp,id,mi,isExp){
+  D.fact[id+'_'+mi]=parseNum(inp.value);
+  pfRowDelta(id,mi,isExp);pfSums();autoSave();
+}
+function pfPlanUpd(inp,id,mi,isExp){
+  const cat=pfCat(id);if(cat)cat.plan[mi]=parseNum(inp.value);
+  pfRowDelta(id,mi,isExp);pfSums();autoSave();
+}
+/* ───── План/Факт «на год»: все статьи × 12 месяцев, редактируемо.
+   kind='plan' пишет в cat.plan[mi]; kind='fact' пишет в D.fact['id_mi']. Всё в млн Rp. */
+function rPFYear(kind){
+  const isPlan=kind==='plan';
+  const tbl=document.getElementById(isPlan?'pf-plan-tbl':'pf-fact-tbl');if(!tbl)return;
+  const secs=[
+    {name:'Доходы',cats:D.incCats},
+    {name:'Расходы',cats:D.expCats},
+    {name:'Долги / обязательства',cats:D.debtCats},
+    {name:'Накопления',cats:D.savCats}
+  ];
+  const hdr=`<thead><tr><th>${isPlan?'Статья · план':'Статья · факт'}</th>${MN.map((m,i)=>`<th class="${i===CM?'cm':''}">${m}${i===CM?' ●':''}</th>`).join('')}<th>Итого</th></tr></thead>`;
+  let body='';
+  secs.forEach((sec,si)=>{
+    if(!sec.cats.length)return;
+    body+=`<tr class="tsec"><td colspan="14">${escapeHtml(sec.name)}</td></tr>`;
+    sec.cats.forEach(c=>{
+      let rowTot=0;
+      const cells=MN.map((_,i)=>{
+        const v=isPlan?(c.plan[i]||0):(+D.fact[c.id+'_'+i]||0);rowTot+=v;
+        return`<td class="${i===CM?'cm':''}"><input class="yi" type="text" inputmode="decimal" value="${v||''}" placeholder="0" oninput="pfYearUpd('${kind}','${c.id}',${i},this)"></td>`;
+      }).join('');
+      body+=`<tr><td style="${c.color?'color:'+ink(c.color):''}">${escapeHtml(c.name)}</td>${cells}<td class="hi" id="yt_${kind}_${c.id}">${rowTot?fN(rowTot,2):'—'}</td></tr>`;
+    });
+    body+=`<tr class="ttot"><td>Итого: ${escapeHtml(sec.name.toLowerCase())}</td>${MN.map((_,i)=>`<td class="${i===CM?'cm':''}" id="ys_${kind}_${si}_${i}"></td>`).join('')}<td class="hi" id="ysg_${kind}_${si}"></td></tr>`;
+  });
+  tbl.innerHTML=hdr+'<tbody>'+body+'</tbody>';
+  pfYearTotals(kind);
+}
+function pfYearTotals(kind){
+  const isPlan=kind==='plan';
+  [D.incCats,D.expCats,D.debtCats,D.savCats].forEach((cats,si)=>{
+    const secTot=Array(12).fill(0);
+    cats.forEach(c=>{
+      let rowTot=0;
+      for(let i=0;i<12;i++){const v=isPlan?(c.plan[i]||0):(+D.fact[c.id+'_'+i]||0);rowTot+=v;secTot[i]+=v;}
+      const rt=document.getElementById('yt_'+kind+'_'+c.id);if(rt)rt.textContent=rowTot?fN(rowTot,2):'—';
+    });
+    for(let i=0;i<12;i++){const el=document.getElementById('ys_'+kind+'_'+si+'_'+i);if(el)el.textContent=secTot[i]?fN(secTot[i],2):'—';}
+    const g=document.getElementById('ysg_'+kind+'_'+si);if(g){const t=secTot.reduce((a,b)=>a+b,0);g.textContent=t?fN(t,2):'—';}
+  });
+}
+function pfYearUpd(kind,id,mi,inp){
+  const v=parseNum(inp.value);
+  if(kind==='plan'){const c=pfCat(id);if(c)c.plan[mi]=v;}
+  else D.fact[id+'_'+mi]=v;
+  pfYearTotals(kind);autoSave();
 }
 
 /* ═══════════════ ADD CAT MODAL ═══════════════ */
@@ -2142,6 +2316,52 @@ function accDrop(ev,targetId){
   lsSave();rAcc();
 }
 
+/* ───── Редактор вкладок меню (Настройки): порядок (drag / ▲▼) + переименование ───── */
+function rNavEd(){
+  const el=document.getElementById('ed-nav');if(!el)return;
+  if(!Array.isArray(D.nav)||!D.nav.length)D.nav=defNav();
+  el.innerHTML=D.nav.map((n,i)=>`
+    <div class="nav-ed-row" draggable="true" data-i="${i}"
+      ondragstart="navDragStart(event,${i})" ondragover="navDragOver(event)" ondragleave="navDragLeave(event)" ondrop="navDrop(event,${i})" ondragend="navDragEnd()">
+      <span class="nav-grip" title="Перетащите">⠿</span>
+      <div class="nav-ord">
+        <button class="ord-b" onclick="moveNav(${i},-1)" ${i===0?'disabled':''} title="Выше">▲</button>
+        <button class="ord-b" onclick="moveNav(${i},1)" ${i===D.nav.length-1?'disabled':''} title="Ниже">▼</button>
+      </div>
+      <input class="nav-lbl" type="text" value="${escapeHtml(n.label)}" oninput="navRename(${i},this.value)" placeholder="${escapeHtml(NAV_DEFLABEL[n.id]||'')}">
+    </div>`).join('');
+}
+function moveNav(i,dir){
+  const j=i+dir;if(j<0||j>=D.nav.length)return;
+  const m=D.nav.splice(i,1)[0];D.nav.splice(j,0,m);
+  lsSave();rNavEd();renderNav();
+}
+function navRename(i,val){
+  if(!D.nav[i])return;D.nav[i].label=val;
+  renderNav();autoSave();   // верхнее меню обновляем сразу; ed-nav НЕ перерисовываем (сохранить фокус)
+}
+function resetNav(){
+  if(!confirm('Вернуть стандартные названия и порядок вкладок?'))return;
+  D.nav=defNav();lsSave();rNavEd();renderNav();toast('Меню сброшено ✓');
+}
+let _dragNav=null;
+function navDragStart(ev,i){
+  _dragNav=i;try{ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',String(i));}catch(e){}
+  const c=ev.currentTarget;setTimeout(()=>c.classList.add('dragging'),0);
+}
+function navDragOver(ev){
+  if(_dragNav==null)return;ev.preventDefault();ev.dataTransfer.dropEffect='move';
+  const c=ev.currentTarget;if(!c.classList.contains('dragging'))c.classList.add('drag-over');
+}
+function navDragLeave(ev){ev.currentTarget.classList.remove('drag-over');}
+function navDragEnd(){_dragNav=null;document.querySelectorAll('.nav-ed-row.dragging,.nav-ed-row.drag-over').forEach(e=>e.classList.remove('dragging','drag-over'));}
+function navDrop(ev,to){
+  ev.preventDefault();const from=_dragNav;navDragEnd();
+  if(from==null||from===to||from<0||to<0)return;
+  const m=D.nav.splice(from,1)[0];D.nav.splice(to,0,m);
+  lsSave();rNavEd();renderNav();
+}
+
 /* ═══════════════ SETTINGS ═══════════════ */
 function rSet(){
   document.getElementById('st-sn').value=D.settings.snUah;
@@ -2151,6 +2371,7 @@ function rSet(){
   const ab=document.getElementById('st-autobk');if(ab)ab.checked=localStorage.getItem(LSK+'_autobk')!=='0';
   const sa=document.getElementById('st-savauto');if(sa)sa.checked=!!D.settings.savAutoClose;
   refreshSnapshotList();
+  rNavEd();
   rCatEd('ed-exp',D.expCats,'exp');
   rCatEd('ed-sav',D.savCats,'sav');
   const cs=document.getElementById('cloud-state');
@@ -2410,6 +2631,8 @@ function bindButtons(){
   document.getElementById('btn-add-debt-pf').onclick=()=>openAddCat('debt','Новая статья долга');
   document.getElementById('btn-add-sav-pf').onclick=()=>openAddCat('sav','Новая цель накоплений');
   document.getElementById('btn-save-pf').onclick=()=>{lsSave();toast('Факты сохранены ✓')};
+  document.getElementById('btn-save-py').onclick=()=>{lsSave();toast('План сохранён ✓')};
+  document.getElementById('btn-save-fy').onclick=()=>{lsSave();toast('Факт сохранён ✓')};
   document.getElementById('btn-save-acc').onclick=saveAcc;
   document.getElementById('am-del').onclick=delAcc;
   document.getElementById('btn-save-pot').onclick=savePot;
@@ -2448,9 +2671,9 @@ function bindButtons(){
 
 /* ═══════════════ RENDER ALL ═══════════════ */
 function rAll(){
-  upHdr();
+  upHdr();renderNav();
   const id=document.querySelector('.pg.act')?.id?.replace('pg-','');
-  ({overview:rOv,income:rInc,planfact:rPF,expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:rOv,income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 
 /* ═══════════════ AUTH GATE ═══════════════ */
@@ -2466,11 +2689,12 @@ function mergeDefaults(obj){
   if(!d.distTpl)d.distTpl={sn:[],vo:[]};
   if(!d.fact)d.fact={};
   if(!Array.isArray(d.savPots))d.savPots=[];   // конверты «реального остатка»; старые данные → пустой список
+  d.nav=reconcileNav(d.nav);   // вкладки меню: всегда ровно 7 валидных, порядок/названия пользователя
   if(!d.settings)d.settings={snUah:80000,vo1:1900,vo2:1900};
   d.rates={...defData().rates,...(d.rates||{})};   // подмешиваем новые курсы (THB и т.п.) в старые данные
   return d;
 }
-function bootData(){rOv();upHdr();}
+function bootData(){rOv();upHdr();renderNav();}
 function initAuth(){
   if(AUTH.mode!=='login'){D=mergeDefaults(lsLoad());bootData();return;}
   showGate();
