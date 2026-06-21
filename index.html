@@ -802,20 +802,44 @@ select option{background:#fff;color:var(--text)}
 
 <!-- EXPENSES -->
 <div id="pg-expenses" class="pg">
-  <div class="card cr mb2">
-    <div class="ctitle"><span class="l"><span class="dot r"></span>Расходы по категориям — план на год</span>
-      <span style="font-size:11px;color:var(--text3)">% дохода · сумма Rp · сумма USD</span>
-    </div>
-    <div id="exp-bars"></div>
+  <div id="exp-subnav" class="subnav">
+    <button class="subtab act" data-tab="plan" onclick="spExp('plan')">📊 План</button>
+    <button class="subtab" data-tab="fact" onclick="spExp('fact')">✅ Факт</button>
   </div>
-  <div class="g2 mb2">
-    <div class="card cg">
-      <div class="ctitle"><span class="l"><span class="dot a"></span>Расходы по месяцам (млн Rp)</span></div>
-      <div class="cw" style="height:230px"><canvas id="ch-exp-m"></canvas></div>
+  <div id="exp-pane-plan">
+    <div class="card cr mb2">
+      <div class="ctitle"><span class="l"><span class="dot r"></span>Расходы по категориям — план на год</span>
+        <span style="font-size:11px;color:var(--text3)">% дохода · сумма Rp · сумма USD</span>
+      </div>
+      <div id="exp-bars"></div>
     </div>
-    <div class="card cr">
-      <div class="ctitle"><span class="l"><span class="dot r"></span>Топ категорий за год (млн Rp)</span></div>
-      <div class="cw" id="ch-exp-bw" style="height:300px"><canvas id="ch-exp-b"></canvas></div>
+    <div class="g2 mb2">
+      <div class="card cg">
+        <div class="ctitle"><span class="l"><span class="dot a"></span>Расходы по месяцам — план (млн Rp)</span></div>
+        <div class="cw" style="height:230px"><canvas id="ch-exp-m"></canvas></div>
+      </div>
+      <div class="card cr">
+        <div class="ctitle"><span class="l"><span class="dot r"></span>Топ категорий за год — план (млн Rp)</span></div>
+        <div class="cw" id="ch-exp-bw" style="height:300px"><canvas id="ch-exp-b"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div id="exp-pane-fact" style="display:none">
+    <div class="card cr mb2">
+      <div class="ctitle"><span class="l"><span class="dot r"></span>Расходы по категориям — факт с начала года до <span id="expf-mon"></span></span>
+        <span style="font-size:11px;color:var(--text3)">% дохода-факт · факт Rp · % плана</span>
+      </div>
+      <div id="exp-fact-bars"></div>
+    </div>
+    <div class="g2 mb2">
+      <div class="card cg">
+        <div class="ctitle"><span class="l"><span class="dot a"></span>Расходы по месяцам — план vs факт (млн Rp)</span></div>
+        <div class="cw" style="height:230px"><canvas id="ch-exp-fact-m"></canvas></div>
+      </div>
+      <div class="card cr">
+        <div class="ctitle"><span class="l"><span class="dot r"></span>Топ категорий по факту (млн Rp)</span></div>
+        <div class="cw" id="ch-exp-fact-bw" style="height:300px"><canvas id="ch-exp-fact-b"></canvas></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1002,7 +1026,6 @@ create policy "anon all" on budget
         <option value="IDR">IDR — Рупии</option><option value="USD">USD — Доллары</option>
         <option value="THB">THB — Тайские баты</option>
         <option value="UAH">UAH — Гривны</option><option value="USDT">USDT — Tether</option>
-        <option value="BTC">BTC — Bitcoin</option><option value="ETH">ETH — Ethereum</option>
       </select></div>
     <div class="mrow"><label>Баланс</label><input type="text" inputmode="decimal" id="am-bal"></div>
     <input type="hidden" id="am-id">
@@ -1429,7 +1452,7 @@ function sp(id,btn){
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
   document.getElementById('pg-'+id).classList.add('act');
   if(btn)btn.classList.add('act');
-  ({overview:()=>spOv(_ovTab),income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:()=>spOv(_ovTab),income:rInc,planfact:()=>spPF(_pfTab),expenses:()=>spExp(_expTab),savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 /* Рендер верхнего меню из D.nav (порядок + названия пользователя). Активную вкладку берём
    из текущей открытой страницы (.pg.act). cls (nb-ov…) сохраняет фикс-цвет активной вкладки. */
@@ -2096,6 +2119,49 @@ function rExp(){
   const s=[...D.expCats].map(c=>({...c,tot:c.plan.reduce((a,b)=>a+b,0)})).sort((a,b)=>b.tot-a.tot);
   document.getElementById('ch-exp-bw').style.height=(s.length*36+60)+'px';
   mkCh('ch-exp-b','bar',{labels:s.map(c=>c.name),datasets:[{data:s.map(c=>c.tot),backgroundColor:s.map(c=>c.color),borderRadius:3}]},
+    {indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fRp(ctx.raw)+' / '+fUsd(ctx.raw)}}},
+      scales:{x:{ticks:{callback:axFmt},grid:{color:'rgba(22,24,18,.06)'}},y:{ticks:{autoSkip:false,font:{size:10}},grid:{display:false}}}});
+}
+/* Подвкладки Расходов: «План» (rExp) и «Факт» (rExpFact — фактическое исполнение из D.fact). */
+let _expTab='plan';
+function spExp(tab){
+  if(!['plan','fact'].includes(tab))tab='plan';
+  _expTab=tab;
+  const pl=document.getElementById('exp-pane-plan'),fc=document.getElementById('exp-pane-fact');
+  if(pl)pl.style.display=tab==='plan'?'':'none';
+  if(fc)fc.style.display=tab==='fact'?'':'none';
+  document.querySelectorAll('#exp-subnav .subtab').forEach(b=>b.classList.toggle('act',b.dataset.tab===tab));
+  if(tab==='plan')rExp();else rExpFact();
+}
+function rExpFact(){
+  const mons=CM+1;                                   // месяцы с начала года по текущий включительно
+  const ytd=fn=>{let s=0;for(let i=0;i<mons;i++)s+=fn(i);return s;};
+  const factY=c=>ytd(i=>+D.fact[c.id+'_'+i]||0);
+  const planY=c=>ytd(i=>c.plan[i]||0);
+  const fiY=D.incCats.reduce((s,c)=>s+factY(c),0);   // факт-доход YTD (для «% от дохода»)
+  const rows=D.expCats.map(c=>({c,f:factY(c),p:planY(c)})).sort((a,b)=>b.f-a.f);
+  const maxF=rows[0]?.f||1;
+  const ml=document.getElementById('expf-mon');if(ml)ml.textContent=MN[CM];
+  document.getElementById('exp-fact-bars').innerHTML=rows.map(({c,f,p})=>{
+    const w=(f/maxF*100).toFixed(0);
+    const pInc=fiY>0?(f/fiY*100).toFixed(1):'0';
+    const planPct=p>0?Math.round(f/p*100):(f>0?'∞':0);
+    const over=p>0&&f>p;
+    return`<div class="br">
+      <span class="br-lbl">${escapeHtml(c.name)}</span>
+      <div class="br-track"><div class="br-fill" style="width:${w}%;background:${over?CC.r:c.color}"></div></div>
+      <span class="br-pct">${pInc}%</span>
+      <span class="br-rp">${fRp(f)}</span>
+      <span class="br-usd" style="color:${over?'var(--red)':'var(--text3)'}">${planPct}% плана</span>
+    </div>`;}).join('')||'<div style="font-size:12px;color:var(--text3);padding:8px 0">Факт расходов вносится во вкладке «План/Факт» — здесь появится исполнение.</div>';
+  const feMo=MN.map((_,i)=>D.expCats.reduce((s,c)=>s+(+D.fact[c.id+'_'+i]||0),0));
+  mkCh('ch-exp-fact-m','bar',{labels:MN,datasets:[
+    {label:'План',data:teArr(),backgroundColor:MN.map(()=>'rgba(131,135,138,.32)'),borderRadius:2,categoryPercentage:.78,barPercentage:.46},
+    {label:'Факт',data:feMo,backgroundColor:MN.map((_,i)=>i===CM?CC.r:CC.r+'aa'),borderRadius:2,categoryPercentage:.78,barPercentage:.46},
+  ]},{plugins:{legend:{display:false}},scales:{x:{ticks:{autoSkip:false,maxRotation:0},grid:{display:false}},y:{ticks:{callback:axFmt}}}});
+  const s=rows.filter(r=>r.f>0);
+  document.getElementById('ch-exp-fact-bw').style.height=(Math.max(s.length,1)*36+60)+'px';
+  mkCh('ch-exp-fact-b','bar',{labels:s.map(r=>r.c.name),datasets:[{data:s.map(r=>r.f),backgroundColor:s.map(r=>r.c.color),borderRadius:3}]},
     {indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fRp(ctx.raw)+' / '+fUsd(ctx.raw)}}},
       scales:{x:{ticks:{callback:axFmt},grid:{color:'rgba(22,24,18,.06)'}},y:{ticks:{autoSkip:false,font:{size:10}},grid:{display:false}}}});
 }
@@ -2911,7 +2977,7 @@ function bindButtons(){
 function rAll(){
   upHdr();renderNav();
   const id=document.querySelector('.pg.act')?.id?.replace('pg-','');
-  ({overview:()=>spOv(_ovTab),income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:()=>spOv(_ovTab),income:rInc,planfact:()=>spPF(_pfTab),expenses:()=>spExp(_expTab),savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 
 /* ═══════════════ AUTH GATE ═══════════════ */
