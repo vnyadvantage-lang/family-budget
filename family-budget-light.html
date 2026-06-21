@@ -280,6 +280,7 @@ select option{background:#fff;color:var(--text)}
 .tbl.pf-ytbl td{padding:3px 4px}
 .tbl.pf-ytbl td:first-child{padding:7px 8px}
 .yi{width:100%;min-width:48px;border:1px solid transparent;background:transparent;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;padding:3px 4px;border-radius:5px;outline:none;font-variant-numeric:tabular-nums;transition:border-color .12s,background .12s}
+.yi.yzero{background:var(--bg3);color:var(--text3)}   /* нулевая/пустая ячейка — лёгкая серая заливка */
 .yi:hover{border-color:var(--brd2)}
 .yi:focus{border-color:var(--acc);background:#fff;color:var(--text);box-shadow:0 0 0 2px rgba(63,122,209,.12)}
 /* ── Годовые таблицы: разделение блоков (Доходы/Расходы/Долги/Накопления) + итоги + проверка ── */
@@ -405,6 +406,19 @@ select option{background:#fff;color:var(--text)}
 .tbl td.wn{color:var(--amber)!important}
 .tbl th.cm,.tbl td.cm{background:rgba(31,157,107,.06)!important;border-color:rgba(31,157,107,.18)!important}
 .tbl th.cm{color:var(--green)!important}
+/* сводная доходов: двухъярусная ячейка план/факт */
+.inc-legend{font-size:11px;color:var(--text3);line-height:1.5;margin:-6px 0 12px}
+.inc-legend b{color:var(--text2);font-weight:700}
+.editbar{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 10px;background:rgba(207,133,0,.1);border:1px solid rgba(207,133,0,.3);border-radius:8px;font-size:11px;color:var(--text2)}
+.editbar span{flex:1;line-height:1.35}
+.tbl td .ic-p{display:block;font-size:10px;color:var(--text3);line-height:1.35;font-weight:500}
+.tbl td .ic-f{display:block;font-weight:700;line-height:1.4;margin-top:1px}
+.tbl td .ic-f.hi{color:var(--green)}
+.tbl td .ic-f.wn{color:var(--amber)}
+.tbl .ttot td .ic-p{color:var(--text2)}
+/* read-only факт доходов в План/Факт (источник — вкладка «Доходы») */
+.pf-fi.pf-ro{display:block;background:var(--bg3);border:1px dashed var(--brd2);color:var(--text2);cursor:default}
+.yi.yi-ro{display:block;color:var(--text3);cursor:default;border:1px solid transparent}
 
 /* ============================================================
    МОБИЛЬНАЯ АДАПТАЦИЯ — добавочно, поверх десктопа (десктоп >820px не меняется).
@@ -574,6 +588,11 @@ select option{background:#fff;color:var(--text)}
 
 <!-- OVERVIEW -->
 <div id="pg-overview" class="pg act">
+  <div id="ov-subnav" class="subnav">
+    <button class="subtab act" data-tab="plan" onclick="spOv('plan')">📊 По плану</button>
+    <button class="subtab" data-tab="fact" onclick="spOv('fact')">✅ По факту</button>
+  </div>
+  <div id="ov-pane-plan">
   <div class="g4 mb2" id="ov-kpis"></div>
   <div class="g2 mb2">
     <div class="card cg">
@@ -616,6 +635,28 @@ select option{background:#fff;color:var(--text)}
     <div class="ctitle"><span class="l"><span class="dot t"></span>Финансовый поток — доходы / расходы / накопления / долги (млн Rp)</span></div>
     <div class="cw" style="height:210px"><canvas id="ch-flow"></canvas></div>
   </div>
+  </div><!-- /ov-pane-plan -->
+  <div id="ov-pane-fact" style="display:none">
+    <div class="g4 mb2" id="ov-fact-kpis"></div>
+    <div class="card ct mb2">
+      <div class="ctitle"><span class="l"><span class="dot t"></span>Достижение плана — факт с начала года до <span id="ovf-mon"></span> (% от плана)</span></div>
+      <div id="ov-fact-bars"></div>
+    </div>
+    <div class="g2 mb2">
+      <div class="card cg">
+        <div class="ctitle"><span class="l"><span class="dot g"></span>Доходы: план vs факт по месяцам (млн Rp)</span></div>
+        <div class="cw" style="height:210px"><canvas id="ch-fact-inc"></canvas></div>
+      </div>
+      <div class="card cr">
+        <div class="ctitle"><span class="l"><span class="dot r"></span>Расходы: план vs факт по месяцам (млн Rp)</span></div>
+        <div class="cw" style="height:210px"><canvas id="ch-fact-exp"></canvas></div>
+      </div>
+    </div>
+    <div class="card cp mb2">
+      <div class="ctitle"><span class="l"><span class="dot p"></span>Накопления: план vs факт по месяцам (млн Rp)</span></div>
+      <div class="cw" style="height:210px"><canvas id="ch-fact-sav"></canvas></div>
+    </div>
+  </div><!-- /ov-pane-fact -->
 </div>
 
 <!-- INCOME -->
@@ -636,15 +677,17 @@ select option{background:#fff;color:var(--text)}
           <div class="fg"><label class="lbl">Валюта</label>
             <select id="sn-ccy"><option value="UAH">UAH</option><option value="USD">USD</option><option value="THB">THB</option><option value="IDR">IDR</option></select></div>
         </div>
+        <div class="fg" id="sn-cat-wrap" style="margin-top:8px;display:none"><label class="lbl">Статья дохода (куда зачесть факт)</label><select id="sn-cat"></select></div>
         <div class="fg" style="margin-top:8px"><label class="lbl" id="sn-rate-lbl">Курс обмена: 1 UAH = ? Rp</label><input type="number" id="sn-rate" placeholder="402"></div>
         <div class="incprev" id="sn-prev">Введите сумму и курс — покажу эквивалент в рупиях</div>
         <div class="fg" style="margin-top:8px"><label class="lbl">Итого Rp — столько запишется (можно поправить)</label><input type="number" id="sn-idr" placeholder="0"></div>
         <button class="btn btn-pr btn-sm" id="btn-add-sn" style="width:100%;margin-top:8px">+ Добавить поступление</button>
+        <div class="editbar" id="sn-editbar" style="display:none"><span>✏️ Правка поступления — измените и нажмите «Сохранить изменение»</span><button class="btn btn-gh btn-sm" onclick="cancelEditInc('sn')">Отмена</button></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">📤 Распределение по счетам</div>
       <div id="sn-drows"></div>
       <button class="btn btn-gh btn-sm mt1" id="btn-dist-sn">+ Добавить счёт</button>
-      <div class="save-row"><button class="btn btn-save" id="btn-save-sn">💾 Сохранить</button></div>
+      <div class="save-row"><button class="btn btn-save" id="btn-save-sn">💾 Сохранить распределение</button></div>
       <div id="sn-log" class="mt1"></div>
     </div>
     <div class="card cg">
@@ -664,20 +707,23 @@ select option{background:#fff;color:var(--text)}
           <div class="fg"><label class="lbl">Валюта</label>
             <select id="vo-ccy"><option value="USDT">USDT</option><option value="USD">USD</option><option value="THB">THB</option><option value="IDR">IDR</option></select></div>
         </div>
+        <div class="fg" id="vo-cat-wrap" style="margin-top:8px;display:none"><label class="lbl">Статья дохода (куда зачесть факт)</label><select id="vo-cat"></select></div>
         <div class="fg" style="margin-top:8px"><label class="lbl" id="vo-rate-lbl">Курс обмена: 1 USDT = ? Rp</label><input type="number" id="vo-rate" placeholder="17800"></div>
         <div class="incprev" id="vo-prev">Введите сумму и курс — покажу эквивалент в рупиях</div>
         <div class="fg" style="margin-top:8px"><label class="lbl">Итого Rp — столько запишется (можно поправить)</label><input type="number" id="vo-idr" placeholder="0"></div>
         <button class="btn btn-pr btn-sm" id="btn-add-vo" style="width:100%;margin-top:8px">+ Добавить поступление</button>
+        <div class="editbar" id="vo-editbar" style="display:none"><span>✏️ Правка поступления — измените и нажмите «Сохранить изменение»</span><button class="btn btn-gh btn-sm" onclick="cancelEditInc('vo')">Отмена</button></div>
       </div>
       <div class="mb1" style="font-size:11.5px;font-weight:700;color:var(--text2)">📤 Распределение по счетам</div>
       <div id="vo-drows"></div>
       <button class="btn btn-gh btn-sm mt1" id="btn-dist-vo">+ Добавить счёт</button>
-      <div class="save-row"><button class="btn btn-save" id="btn-save-vo">💾 Сохранить</button></div>
+      <div class="save-row"><button class="btn btn-save" id="btn-save-vo">💾 Сохранить распределение</button></div>
       <div id="vo-log" class="mt1"></div>
     </div>
   </div>
   <div class="card cg mb2">
     <div class="ctitle"><span class="l"><span class="dot g"></span>Сводная таблица доходов — план / факт</span><span class="tag tp ccy-tog" id="inc-ccy-tog" onclick="toggleIncCcy()" title="Переключить валюту отображения">Rp IDR</span></div>
+    <div class="inc-legend">Серым сверху — <b>план</b>, цветом снизу — <b>факт</b> по записанным поступлениям. ▲ выше плана · ▼ ниже. Факт связан со вкладкой «План/Факт» (правится в обоих местах).</div>
     <div class="tw"><table class="tbl" id="inc-tbl"></table></div>
   </div>
 </div>
@@ -990,7 +1036,8 @@ create policy "anon all" on budget
   <div class="modal">
     <div class="mtitle" id="m-addcat-t">Новая категория<button class="mclose" onclick="cm('m-addcat')">✕</button></div>
     <div class="mrow"><label>Название</label><input type="text" id="nc-name"></div>
-    <div class="mrow"><label>Цвет (hex, напр. #00b894)</label><input type="text" id="nc-color" placeholder="#3f7ad1"></div>
+    <div class="mrow" id="nc-own-row" style="display:none"><label>Чей доход</label><select id="nc-own"><option value="sn">Снежана</option><option value="vo">Вова</option></select></div>
+    <div class="mrow" id="nc-color-row"><label>Цвет</label><input type="color" class="ce-color" id="nc-color" style="width:46px;height:34px"></div>
     <input type="hidden" id="nc-type">
     <div class="mfooter">
       <button class="btn btn-gh" onclick="cm('m-addcat')">Отмена</button>
@@ -1150,6 +1197,7 @@ function defData(){
 /* ═══════════════ STATE ═══════════════ */
 let D=null, _ch={};
 let distSn=[], distVo=[];
+let _editId={sn:null,vo:null};   // id редактируемого поступления (режим правки), null — обычный режим
 let incCcy='IDR';   // валюта отображения сводной таблицы доходов: 'IDR' | 'USD'
 let _cloudDown=false;   // облако настроено, но сейчас недоступно → работаем офлайн от локальной копии
 
@@ -1331,29 +1379,30 @@ function ink(hex){
 
 /* ═══════════════ FORMATTING ═══════════════ */
 function fRp(val){
-  const rp=val*1e6;
-  if(rp>=1e9)return'Rp '+(rp/1e9).toFixed(2)+' млрд';
-  if(rp>=1e6)return'Rp '+(rp/1e6).toFixed(2)+' млн';
-  if(rp>=1000)return'Rp '+Math.round(rp).toLocaleString('ru');
-  return'Rp '+rp.toFixed(0);
+  const sg=val<0?'−':'';const rp=Math.abs(val)*1e6;
+  if(rp>=1e9)return sg+'Rp '+(rp/1e9).toFixed(2)+' млрд';
+  if(rp>=1e6)return sg+'Rp '+(rp/1e6).toFixed(2)+' млн';
+  if(rp>=1000)return sg+'Rp '+Math.round(rp).toLocaleString('ru');
+  return sg+'Rp '+rp.toFixed(0);
 }
 function fUsd(val){
-  const usd=(val*1e6)/D.rates.usdIdr;
-  if(usd>=1000)return'$'+Math.round(usd).toLocaleString('ru');
-  if(usd>=1)return'$'+usd.toFixed(0);
-  return'<$1';
+  const sg=val<0?'−':'';const usd=(Math.abs(val)*1e6)/D.rates.usdIdr;
+  if(usd>=1000)return sg+'$'+Math.round(usd).toLocaleString('ru');
+  if(usd>=1)return sg+'$'+usd.toFixed(0);
+  return sg+'<$1';
 }
 function fUsdA(actualIdr){
-  const usd=actualIdr/D.rates.usdIdr;
-  if(usd>=1000)return'$'+Math.round(usd).toLocaleString('ru');
-  if(usd>=1)return'$'+usd.toFixed(0);
-  return'<$1';
+  const sg=actualIdr<0?'−':'';const usd=Math.abs(actualIdr)/D.rates.usdIdr;
+  if(usd>=1000)return sg+'$'+Math.round(usd).toLocaleString('ru');
+  if(usd>=1)return sg+'$'+usd.toFixed(0);
+  return sg+'<$1';
 }
 function fRpA(actualIdr){
-  if(actualIdr>=1e9)return'Rp '+(actualIdr/1e9).toFixed(2)+' млрд';
-  if(actualIdr>=1e6)return'Rp '+(actualIdr/1e6).toFixed(2)+' млн';
-  if(actualIdr>=1000)return'Rp '+Math.round(actualIdr).toLocaleString('ru');
-  return'Rp '+actualIdr.toFixed(0);
+  const sg=actualIdr<0?'−':'';const a=Math.abs(actualIdr);
+  if(a>=1e9)return sg+'Rp '+(a/1e9).toFixed(2)+' млрд';
+  if(a>=1e6)return sg+'Rp '+(a/1e6).toFixed(2)+' млн';
+  if(a>=1000)return sg+'Rp '+Math.round(a).toLocaleString('ru');
+  return sg+'Rp '+a.toFixed(0);
 }
 function axFmt(v){
   if(v===0)return'0';
@@ -1380,7 +1429,7 @@ function sp(id,btn){
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
   document.getElementById('pg-'+id).classList.add('act');
   if(btn)btn.classList.add('act');
-  ({overview:rOv,income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:()=>spOv(_ovTab),income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 /* Рендер верхнего меню из D.nav (порядок + названия пользователя). Активную вкладку берём
    из текущей открытой страницы (.pg.act). cls (nb-ov…) сохраняет фикс-цвет активной вкладки. */
@@ -1430,7 +1479,7 @@ function rOv(){
     {l:'Доход в '+MN[CM],v:fRp(ti[CM]),s:fUsd(ti[CM]),c:'g'},
     {l:'Расходы в '+MN[CM],v:fRp(te[CM]),s:fUsd(te[CM])+' · '+(te[CM]/ti[CM]*100).toFixed(1)+'%',c:'r'},
     {l:'Накопления в '+MN[CM],v:ts[CM]?fRp(ts[CM]):'—',s:ts[CM]?fUsd(ts[CM])+' · '+(ts[CM]/ti[CM]*100).toFixed(1)+'%':'нет плана',c:'p'},
-    {l:'Не распределено (год)',v:fRp(21.2),s:fUsd(21.2),c:'t'},
+    {l:'Не распределено (год)',v:fRp(ai-ae-ad-as),s:fUsd(ai-ae-ad-as),c:'t'},
   ].map(k=>{
     const ac={g:'var(--green)',r:'var(--red)',a:'var(--amber)',p:'var(--indigo)',t:'var(--teal)',b:'var(--acc)'}[k.c]||'var(--brd2)';
     return`<div class="kpi" style="border-left:4px solid ${ac}">
@@ -1494,6 +1543,61 @@ function rOv(){
   ]},{plugins:{legend:{position:'bottom',labels:{boxWidth:8,padding:12}}},
     scales:{x:{ticks:{autoSkip:false,maxRotation:0},grid:{display:false}},y:{ticks:{callback:axFmt}}}});
 }
+/* Подвкладки Обзора: «По плану» (rOv) и «По факту» (rOvFact — достижение факта vs план + накопленный факт до тек. месяца). */
+let _ovTab='plan';
+function spOv(tab){
+  if(!['plan','fact'].includes(tab))tab='plan';
+  _ovTab=tab;
+  const pl=document.getElementById('ov-pane-plan'),fc=document.getElementById('ov-pane-fact');
+  if(pl)pl.style.display=tab==='plan'?'':'none';
+  if(fc)fc.style.display=tab==='fact'?'':'none';
+  document.querySelectorAll('#ov-subnav .subtab').forEach(b=>b.classList.toggle('act',b.dataset.tab===tab));
+  if(tab==='plan')rOv();else rOvFact();
+}
+// Сумма факта по разделу за месяц (млн Rp) — из единого реестра D.fact (тот же источник, что и План/Факт).
+function factMoArr(cats){return MN.map((_,i)=>cats.reduce((s,c)=>s+(+D.fact[c.id+'_'+i]||0),0));}
+function rOvFact(){
+  const mons=CM+1, ytd=a=>a.slice(0,mons).reduce((s,b)=>s+b,0);
+  const fi=factMoArr(D.incCats),fe=factMoArr(D.expCats),fs=factMoArr(D.savCats),fd=factMoArr(D.debtCats);
+  const pi=tiArr(),pe=teArr(),ps=tsArr(),pd=tdArr();
+  const fiY=ytd(fi),feY=ytd(fe),fsY=ytd(fs),fdY=ytd(fd);
+  const piY=ytd(pi),peY=ytd(pe),psY=ytd(ps),pdY=ytd(pd);
+  const ach=(f,p)=>p>0?Math.round(f/p*100):(f>0?100:0);
+  const ml=document.getElementById('ovf-mon');if(ml)ml.textContent=MN[CM];
+  const kpis=[
+    {l:'Доходы факт · до '+MN[CM],v:fRp(fiY),s:'план '+fRp(piY),c:'g',pct:ach(fiY,piY)+'%',pc:fiY>=piY?'pos':'neg'},
+    {l:'Расходы факт · до '+MN[CM],v:fRp(feY),s:'план '+fRp(peY),c:'r',pct:ach(feY,peY)+'%',pc:feY<=peY?'pos':'neg'},
+    {l:'Накопления факт · до '+MN[CM],v:fRp(fsY),s:'план '+fRp(psY),c:'p',pct:ach(fsY,psY)+'%',pc:fsY>=psY?'pos':'neg'},
+    {l:'Сальдо факт · до '+MN[CM],v:fRp(fiY-feY-fdY-fsY),s:'доходы − расходы − долги − накопления',c:'t'},
+  ];
+  document.getElementById('ov-fact-kpis').innerHTML=kpis.map(k=>{
+    const ac={g:'var(--green)',r:'var(--red)',a:'var(--amber)',p:'var(--indigo)',t:'var(--teal)'}[k.c]||'var(--brd2)';
+    return`<div class="kpi" style="border-left:4px solid ${ac}">
+      <div class="kpi-l"><div class="kl">${k.l}</div><div class="ks">${k.s}</div></div>
+      <div class="kpi-r"><div class="kv ${k.c}">${k.v}</div>${k.pct?`<div class="kpct ${k.pc}">${k.pct}</div>`:''}</div>
+    </div>`;}).join('');
+  const secs=[
+    {n:'Доходы',f:fiY,p:piY,good:fiY>=piY},
+    {n:'Расходы',f:feY,p:peY,good:feY<=peY},
+    {n:'Накопления',f:fsY,p:psY,good:fsY>=psY},
+    {n:'Долги / виза',f:fdY,p:pdY,good:fdY>=pdY},
+  ];
+  document.getElementById('ov-fact-bars').innerHTML=secs.map(s=>{
+    const pct=s.p>0?s.f/s.p*100:(s.f>0?100:0);
+    const c=s.good?CC.g:(pct>0?CC.r:CC.a);
+    return`<div class="br"><span class="br-lbl">${s.n}</span>
+      <div class="br-track"><div class="br-fill" style="width:${Math.min(pct,100)}%;background:${c}"></div></div>
+      <span class="br-pct" style="color:${c}">${Math.round(pct)}%</span>
+      <span class="br-rp">${fRp(s.f)} / ${fRp(s.p)}</span>
+    </div>`;}).join('');
+  const pvf=(id,plan,fact,col)=>mkCh(id,'bar',{labels:MN,datasets:[
+    {label:'План',data:plan,backgroundColor:MN.map(()=>'rgba(131,135,138,.32)'),borderRadius:2,categoryPercentage:.78,barPercentage:.46},
+    {label:'Факт',data:fact,backgroundColor:MN.map((_,i)=>i===CM?col:col+'aa'),borderRadius:2,categoryPercentage:.78,barPercentage:.46},
+  ]},{plugins:{legend:{display:false}},scales:{x:{ticks:{autoSkip:false,maxRotation:0},grid:{display:false}},y:{ticks:{callback:axFmt}}}});
+  pvf('ch-fact-inc',pi,fi,CC.g);
+  pvf('ch-fact-exp',pe,fe,CC.r);
+  pvf('ch-fact-sav',ps,fs,CC.p);
+}
 
 /* ═══════════════ INCOME ═══════════════ */
 function rInc(){
@@ -1502,10 +1606,17 @@ function rInc(){
     s.innerHTML='<option value="">—</option>';
     MN.forEach((m,i)=>s.innerHTML+=`<option value="${i}" ${i==cur?'selected':''}>${m}</option>`);
   });
-  ['sn','vo'].forEach(w=>{   // подставить курс по умолчанию, метку и предпросмотр
+  ['sn','vo'].forEach(w=>{   // подставить актуальный курс (кроме момента ручного ввода в это поле), метку и предпросмотр
     const rf=document.getElementById(w+'-rate');
-    if(rf&&!rf.value)rf.value=rateFor(document.getElementById(w+'-ccy').value);
+    if(rf&&document.activeElement!==rf)rf.value=rateFor(document.getElementById(w+'-ccy').value);
     setRateLabel(w);recalcInc(w);
+  });
+  ['sn','vo'].forEach(w=>{   // селектор статьи дохода (куда зачесть факт); скрыт, если статья одна
+    const sel=document.getElementById(w+'-cat');if(!sel)return;
+    const cats=D.incCats.filter(c=>c.own===w);const cur=sel.value;
+    sel.innerHTML=cats.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+    if(cur&&cats.some(c=>c.id===cur))sel.value=cur;
+    const wrap=document.getElementById(w+'-cat-wrap');if(wrap)wrap.style.display=cats.length>1?'':'none';
   });
   const snIdr=D.settings.snUah*D.rates.uahIdr;
   document.getElementById('sn-sal-d').textContent=D.settings.snUah.toLocaleString()+' ₴';
@@ -1632,28 +1743,48 @@ function addInc(who){
     const idrAmt=idrK*(r.pct/100);
     r.credited=a.ccy==='IDR'?idrAmt:a.ccy==='UAH'?idrAmt/D.rates.uahIdr:a.ccy==='USD'?idrAmt/D.rates.usdIdr:a.ccy==='USDT'?idrAmt/(D.rates.usdIdr*D.rates.usdtUsd):a.ccy==='THB'?idrAmt/D.rates.thbIdr:idrAmt;
   });
-  const entry={id:Date.now(),mi,amt,ccy,rate,idrK,dist,date:new Date().toLocaleDateString('ru')};
+  const cat=(document.getElementById(who+'-cat')||{}).value||'';
+  // режим правки: старую запись откатываем АТОМАРНО только сейчас, при подтверждении (не при клике ✏️)
+  if(_editId[who]!=null){
+    const old=D.incLog[who].find(x=>x.id===_editId[who]);
+    if(old){applyEntryToBalances(old,-1);const oc=entCat(who,old),om=old.mi;D.incLog[who]=D.incLog[who].filter(x=>x.id!==_editId[who]);recalcIncFactCell(oc,om);}
+    setIncEditMode(who,false);
+  }
+  const entry={id:Date.now(),mi,amt,ccy,rate,idrK,dist,cat,date:new Date().toLocaleDateString('ru')};
   D.incLog[who].push(entry);
   applyEntryToBalances(entry,1);
+  recalcIncFactCell(entCat(who,entry),entry.mi);
   lsSave();
   document.getElementById(who+'-amt').value='';document.getElementById(who+'-idr').value='';
   recalcInc(who);
   rLog(who);rAccTotals();upHdr();rIncTbl();toast('Записано ✓');
 }
-function editInc(who,id){   // загрузить запись обратно в форму для исправления
+function editInc(who,id){   // загрузить запись в форму для правки; сама запись НЕ удаляется до подтверждения
   const e=D.incLog[who].find(x=>x.id===id);if(!e)return;
-  applyEntryToBalances(e,-1);                       // откатить влияние на балансы
-  D.incLog[who]=D.incLog[who].filter(x=>x.id!==id); // убрать старую запись
   document.getElementById(who+'-mi').value=e.mi;
   document.getElementById(who+'-amt').value=e.amt;
   document.getElementById(who+'-ccy').value=e.ccy;
   document.getElementById(who+'-rate').value=e.rate||rateFor(e.ccy);
+  const cs=document.getElementById(who+'-cat');if(cs&&e.cat&&[...cs.options].some(o=>o.value===e.cat))cs.value=e.cat;
   if(e.dist){const d=e.dist.map(r=>({...r}));if(who==='sn')distSn=d;else distVo=d;rDist(who);}
   setRateLabel(who);recalcInc(who);
   document.getElementById(who+'-idr').value=e.idrK;  // прежний итог — можно поправить
-  lsSave();rLog(who);rAccTotals();upHdr();rIncTbl();
-  toast('Исправьте значения и нажмите «Добавить»');
+  setIncEditMode(who,true,id);
   document.getElementById(who+'-amt').scrollIntoView({behavior:'smooth',block:'center'});
+}
+// Переключение режима правки поступления: подпись кнопки + видимая плашка «правка» с отменой.
+function setIncEditMode(who,on,id){
+  _editId[who]=on?id:null;
+  const btn=document.getElementById('btn-add-'+who);
+  if(btn)btn.textContent=on?'💾 Сохранить изменение':'+ Добавить поступление';
+  const bar=document.getElementById(who+'-editbar');
+  if(bar)bar.style.display=on?'flex':'none';
+}
+function cancelEditInc(who){
+  setIncEditMode(who,false);
+  document.getElementById(who+'-amt').value='';document.getElementById(who+'-idr').value='';
+  const d=(D.distTpl[who]||[]).map(r=>({...r}));if(who==='sn')distSn=d;else distVo=d;rDist(who);
+  recalcInc(who);toast('Правка отменена');
 }
 function saveInc(who){
   D.distTpl[who]=(who==='sn'?distSn:distVo).map(r=>({...r}));
@@ -1683,29 +1814,67 @@ function rLog(who){
 function delInc(who,id){
   const e=D.incLog[who].find(x=>x.id===id);
   if(e&&!confirm('Удалить это поступление? Сумма будет вычтена из баланса счетов.'))return;
-  if(e)applyEntryToBalances(e,-1);   // откатить влияние на балансы
+  if(_editId[who]===id)setIncEditMode(who,false);   // удаляем редактируемую → выйти из режима правки
+  let cat=null,mi=null;
+  if(e){applyEntryToBalances(e,-1);cat=entCat(who,e);mi=e.mi;}
   D.incLog[who]=D.incLog[who].filter(x=>x.id!==id);
+  if(e)recalcIncFactCell(cat,mi);   // очистит/пересчитает факт именно этой ячейки (в т.ч. при удалении последней записи)
   lsSave();rLog(who);rIncTbl();rAccTotals();upHdr();toast('Удалено');
 }
 function toggleIncCcy(){incCcy=incCcy==='IDR'?'USD':'IDR';rIncTbl();}
+// К какой статье дохода относится поступление: по полю cat (если валидно), иначе первая статья владельца.
+function entCat(who,e){
+  if(e.cat&&D.incCats.some(c=>c.id===e.cat&&c.own===who))return e.cat;
+  const first=D.incCats.find(c=>c.own===who);return first?first.id:null;
+}
+// Мост Доходы↔План/Факт. Факт доходов живёт в D.fact['<id>_<mi>'] (млн Rp) и редактируется
+// ДВУСТОРОННЕ: запись поступления (D.incLog, сырые IDR) проставляет факт целевой ячейки;
+// править факт можно и прямо в План/Факт. Поэтому пересчитываем ТОЛЬКО затронутую ячейку при
+// мутации поступления (не на каждый рендер) — иначе ручные правки в План/Факт затирались бы.
+function recalcIncFactCell(catId,mi){
+  if(catId==null||mi==null)return;
+  const cat=D.incCats.find(c=>c.id===catId);if(!cat||!cat.own)return;
+  const who=cat.own;
+  const sum=(D.incLog[who]||[]).filter(e=>e.mi===mi&&entCat(who,e)===catId).reduce((s,e)=>s+(e.idrK||0),0);
+  const key=catId+'_'+mi;
+  if(sum>0)D.fact[key]=+(sum/1e6).toFixed(4);else delete D.fact[key];   // нет поступлений → ячейка свободна (или очищается)
+}
+// Разовая инициализация при загрузке: проставить факт из уже записанных поступлений,
+// НЕ удаляя ручные правки (set-only) — на случай данных, записанных до появления ячеечного моста.
+function syncIncFactAll(){
+  const acc={};
+  ['sn','vo'].forEach(who=>{(D.incLog[who]||[]).forEach(e=>{
+    const cid=entCat(who,e);if(!cid)return;const k=cid+'_'+e.mi;acc[k]=(acc[k]||0)+(e.idrK||0);
+  });});
+  Object.keys(acc).forEach(k=>{if(acc[k]>0)D.fact[k]=+(acc[k]/1e6).toFixed(4);});
+}
 function rIncTbl(){
   const tbl=document.getElementById('inc-tbl');if(!tbl)return;
   const isUsd=incCcy==='USD';
-  const F =v=>isUsd?fUsd(v):fRp(v);    // план: значение в млн IDR
-  const FA=v=>isUsd?fUsdA(v):fRpA(v);  // факт: значение в IDR
-  const gF=(who,mi)=>D.incLog[who].filter(e=>e.mi===mi).reduce((s,e)=>s+e.idrK,0)||null;
-  const hdr=`<thead><tr><th>Источник</th>${MN.map((m,i)=>`<th class="${i===CM?'cm':''}">${m}${i===CM?' ●':''}</th>`).join('')}<th>Итого план</th></tr></thead>`;
+  const F=v=>isUsd?fUsd(v):fRp(v);                              // всё в млн Rp (план и факт)
+  const factOf=(c,i)=>{const k=c.id+'_'+i;return(k in D.fact)?+D.fact[k]:null;};
+  const cellHtml=(p,f,cm)=>{
+    const planTxt=`<span class="ic-p">${p?F(p):'—'}</span>`;
+    if(f==null)return`<td class="${p===0?'z':''}${cm}">${planTxt}</td>`;
+    const cls=f>=p?'hi':'wn';
+    return`<td class="${cm}">${planTxt}<span class="ic-f ${cls}">${f>=p?'▲':'▼'} ${F(f)}</span></td>`;
+  };
+  const hdr=`<thead><tr><th>Источник</th>${MN.map((m,i)=>`<th class="${i===CM?'cm':''}">${m}${i===CM?' ●':''}</th>`).join('')}<th>Итого</th></tr></thead>`;
   const ti=tiArr();
+  const tf=MN.map((_,i)=>D.incCats.reduce((s,c)=>{const f=factOf(c,i);return s+(f!=null?f:0);},0));
+  const factMonth=MN.map((_,i)=>D.incCats.some(c=>factOf(c,i)!=null));
   const rows=D.incCats.map(c=>{
-    const tot=c.plan.reduce((a,b)=>a+b,0);
+    const totP=c.plan.reduce((a,b)=>a+b,0);
+    let totF=0,hasF=false;
     const cells=MN.map((_,i)=>{
-      const p=c.plan[i];const f=c.own?gF(c.own,i):null;const cm=i===CM?' cm':'';
-      if(f!==null){const fp=f/1e6;return`<td class="${fp>=p?'hi':'wn'}${cm}">${FA(f)}</td>`}
-      return`<td class="${p===0?'z':''}${cm}">${p?F(p):'—'}</td>`;
+      const p=c.plan[i]||0;const f=factOf(c,i);if(f!=null){hasF=true;totF+=f;}
+      return cellHtml(p,f,i===CM?' cm':'');
     }).join('');
-    return`<tr><td style="color:${ink(c.color)}">${c.name}</td>${cells}<td class="hi">${F(tot)}</td></tr>`;
+    return`<tr><td style="color:${ink(c.color)}">${escapeHtml(c.name)}</td>${cells}${cellHtml(totP,hasF?totF:null,'')}</tr>`;
   }).join('');
-  const totRow=`<tr class="ttot"><td>ИТОГО</td>${MN.map((_,i)=>`<td class="hi${i===CM?' cm':''}">${F(ti[i])}</td>`).join('')}<td class="hi">${F(ti.reduce((a,b)=>a+b))}</td></tr>`;
+  const giP=ti.reduce((a,b)=>a+b),giF=tf.reduce((a,b)=>a+b),anyF=factMonth.some(Boolean);
+  const totCells=MN.map((_,i)=>cellHtml(ti[i],factMonth[i]?tf[i]:null,i===CM?' cm':'')).join('');
+  const totRow=`<tr class="ttot"><td>ИТОГО</td>${totCells}${cellHtml(giP,anyF?giF:null,'')}</tr>`;
   tbl.innerHTML=hdr+'<tbody>'+rows+totRow+'</tbody>';
   const tog=document.getElementById('inc-ccy-tog');
   if(tog)tog.textContent=isUsd?'$ USD':'Rp IDR';
@@ -1734,23 +1903,26 @@ function rPF(){
   document.getElementById('pf-sav').innerHTML=D.savCats.map(c=>pRow(c.id,c.name,c.plan[mi],mi,false)).join('');
 }
 function pfSums(){
-  const mi=pfM,ti=tiArr(),te=teArr(),ts=tsArr(),td=tdArr();
+  const mi=pfM;
   const gf=id=>D.fact[id+'_'+mi]??null;
-  const sf=ids=>{let s=0,any=false;ids.forEach(id=>{const f=gf(id);if(f!==null){s+=f;any=true}});return any?s:null};
+  // факт = Σ по статьям с введённым фактом; план — СИММЕТРИЧНО, только по тем же статьям (иначе мнимая «экономия»)
+  const sec=cats=>{let f=0,p=0,any=false;cats.forEach(c=>{const v=gf(c.id);if(v!==null){f+=v;p+=(c.plan[mi]||0);any=true;}});return any?{f,p}:null;};
+  const card=(lbl,cats,c,isExp)=>{const r=sec(cats);return pSum(lbl,r?r.p:0,r?r.f:null,c,isExp);};
   document.getElementById('pf-sums').innerHTML=
-    pSum('Доходы',ti[mi],sf(D.incCats.map(c=>c.id)),'g')+
-    pSum('Расходы',te[mi],sf(D.expCats.map(c=>c.id)),'r')+
-    pSum('Накопления',ts[mi],sf(D.savCats.map(c=>c.id)),'p')+
-    pSum('Долги',td[mi],sf(D.debtCats.map(c=>c.id)),'a');
+    card('Доходы',D.incCats,'g',false)+
+    card('Расходы',D.expCats,'r',true)+
+    card('Накопления',D.savCats,'p',false)+
+    card('Долги',D.debtCats,'a',true);
 }
-function pSum(lbl,plan,fact,c){
+function pSum(lbl,plan,fact,c,isExp){
   const hF=fact!==null;const d=hF?fact-plan:null;
   const pct=hF&&plan>0?((d/plan)*100).toFixed(1):null;
-  const dc=d===null?'':(d>=0?'dp':'dn');
+  // для расходов/долгов перерасход (d>0) — плохо (красный), экономия — хорошо (зелёный); для доходов/накоплений наоборот
+  const dc=d===null?'':(isExp?(d>0?'dn':'dp'):(d>=0?'dp':'dn'));
   return`<div class="pf-sum"><div class="pf-sum-l">${lbl}</div>
     <div class="pf-sum-p">План: ${fRp(plan)}</div>
     <div class="pf-sum-f kv ${hF?c:''}">${hF?fRp(fact):'нет данных'}</div>
-    ${d!==null?`<div class="pf-sum-d ${dc}">${d>=0?'+':''}${fRp(Math.abs(d))} (${pct}%)</div>`:''}</div>`;
+    ${d!==null?`<div class="pf-sum-d ${dc}">${d>=0?'+':'−'}${fRp(Math.abs(d))} (${pct}%)</div>`:''}</div>`;
 }
 function pfCat(id){return D.incCats.find(c=>c.id===id)||D.expCats.find(c=>c.id===id)||D.savCats.find(c=>c.id===id)||D.debtCats.find(c=>c.id===id);}
 function pRow(id,label,plan,mi,isExp){
@@ -1759,14 +1931,16 @@ function pRow(id,label,plan,mi,isExp){
   const pct=delta!==null&&plan>0?((delta/plan)*100).toFixed(0):null;
   const dc=delta===null?'':(isExp?(delta>0?'dn':'dp'):(delta>=0?'dp':'dn'));
   const typeGuess=D.incCats.find(c=>c.id===id)?'inc':D.expCats.find(c=>c.id===id)?'exp':D.savCats.find(c=>c.id===id)?'sav':'debt';
+  const incTitle=typeGuess==='inc'?'Факт дохода (млн Rp). Можно править здесь или записывать поступления во вкладке «Доходы»':'Факт, млн Rp';
+  // Факт редактируется во всех разделах, включая доходы (двусторонне с вкладкой «Доходы»).
+  const factField=`<input class="pf-fi" type="text" inputmode="decimal" value="${f}" placeholder="${plan?fN(plan):''}" oninput="pfUpd(this,'${id}',${mi},${isExp})" title="${incTitle}">`;
   return`<div class="pf-row">
     <span class="pf-cat">${label}<span class="ri" onclick="openRen('${id}','${typeGuess}','${label.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">✎</span></span>
     <input class="pf-fi pf-pi" type="text" inputmode="decimal" value="${plan||''}" placeholder="0"
       oninput="pfPlanUpd(this,'${id}',${mi},${isExp})" title="План, млн Rp">
-    <input class="pf-fi" type="text" inputmode="decimal" value="${f}" placeholder="${plan?fN(plan):''}"
-      oninput="pfUpd(this,'${id}',${mi},${isExp})" title="Факт, млн Rp">
-    <span class="pf-d ${dc}" id="pfd_${id}_${mi}">${delta!==null?(delta>=0?'+':'')+fRp(Math.abs(delta)):'—'}</span>
-    <span class="pf-d ${dc}" id="pfp_${id}_${mi}" style="font-size:10px">${pct!==null?(delta>=0?'+':'')+pct+'%':'—'}</span>
+    ${factField}
+    <span class="pf-d ${dc}" id="pfd_${id}_${mi}">${delta!==null?(delta>=0?'+':'−')+fRp(Math.abs(delta)):'—'}</span>
+    <span class="pf-d ${dc}" id="pfp_${id}_${mi}" style="font-size:10px">${pct!==null?(delta>=0?'+':'−')+pct+'%':'—'}</span>
   </div>`;
 }
 // Пересчёт Δ/% одной строки помесячного вида: план берём из категории, факт — из D.fact.
@@ -1778,11 +1952,12 @@ function pfRowDelta(id,mi,isExp){
   const dc=d===null?'':(isExp?(d>0?'dn':'dp'):(d>=0?'dp':'dn'));
   const de=document.getElementById('pfd_'+id+'_'+mi);
   const pe=document.getElementById('pfp_'+id+'_'+mi);
-  if(de){de.className='pf-d '+dc;de.textContent=d!==null?(d>=0?'+':'')+fRp(Math.abs(d)):'—';}
-  if(pe){pe.className='pf-d '+dc;pe.textContent=pct!==null?(d>=0?'+':'')+pct+'%':'—';}
+  if(de){de.className='pf-d '+dc;de.textContent=d!==null?(d>=0?'+':'−')+fRp(Math.abs(d)):'—';}
+  if(pe){pe.className='pf-d '+dc;pe.textContent=pct!==null?(d>=0?'+':'−')+pct+'%':'—';}
 }
 function pfUpd(inp,id,mi,isExp){
-  D.fact[id+'_'+mi]=parseNum(inp.value);
+  const k=id+'_'+mi;
+  if(inp.value.trim()==='')delete D.fact[k]; else D.fact[k]=parseNum(inp.value);   // пусто = «нет данных», а не 0
   pfRowDelta(id,mi,isExp);pfSums();autoSave();
 }
 function pfPlanUpd(inp,id,mi,isExp){
@@ -1814,7 +1989,7 @@ function rPFYear(kind){
       let rowTot=0;
       const cells=MN.map((_,i)=>{
         const v=isPlan?(c.plan[i]||0):(+D.fact[c.id+'_'+i]||0);rowTot+=v;
-        return`<td class="${i===CM?'cm':''}"><input class="yi" type="text" inputmode="decimal" value="${yval(v)}" placeholder="0" oninput="pfYearUpd('${kind}','${c.id}',${i},this)"></td>`;
+        return`<td class="${i===CM?'cm':''}"><input class="yi${v?'':' yzero'}" type="text" inputmode="decimal" value="${yval(v)}" placeholder="0" oninput="pfYearUpd('${kind}','${c.id}',${i},this)"></td>`;
       }).join('');
       body+=`<tr class="ycat"><td style="${c.color?'color:'+ink(c.color):''}">${escapeHtml(c.name)}</td>${cells}<td class="hi" id="yt_${kind}_${c.id}">${rowTot?fNc(rowTot):'—'}</td></tr>`;
     });
@@ -1852,7 +2027,8 @@ function pfYearTotals(kind){
 function pfYearUpd(kind,id,mi,inp){
   const v=parseNum(inp.value);
   if(kind==='plan'){const c=pfCat(id);if(c)c.plan[mi]=v;}
-  else D.fact[id+'_'+mi]=v;
+  else{const k=id+'_'+mi; if(inp.value.trim()==='')delete D.fact[k]; else D.fact[k]=v;}   // пусто = нет данных
+  inp.classList.toggle('yzero',!v);   // серая заливка нулевой/пустой ячейки — обновляем без перерисовки
   pfYearTotals(kind);autoSave();
 }
 
@@ -1862,6 +2038,8 @@ function openAddCat(type,title){
   document.getElementById('nc-name').value='';
   document.getElementById('nc-color').value=BCLRS[Math.floor(Math.random()*BCLRS.length)];
   document.getElementById('nc-type').value=type;
+  document.getElementById('nc-color-row').style.display=type==='debt'?'none':'';   // у долгов цвета нет
+  document.getElementById('nc-own-row').style.display=type==='inc'?'':'none';       // владелец нужен только доходу
   om('m-addcat');
 }
 function saveCatModal(){
@@ -1873,8 +2051,9 @@ function saveCatModal(){
   if(type==='exp')D.expCats.push({id,name,color,plan:Array(12).fill(0)});
   else if(type==='sav')D.savCats.push({id,name,color,target:0,plan:Array(12).fill(0)});
   else if(type==='debt')D.debtCats.push({id,name,plan:Array(12).fill(0)});
-  else if(type==='inc')D.incCats.push({id,name,own:'',color,plan:Array(12).fill(0)});
+  else if(type==='inc')D.incCats.push({id,name,own:(document.getElementById('nc-own').value||'sn'),color,plan:Array(12).fill(0)});
   lsSave();cm('m-addcat');rPF();rSet();
+  if(document.getElementById('pg-income').classList.contains('act'))rInc();   // обновить селекты/таблицу доходов
   if(document.getElementById('pg-savings').classList.contains('act'))spSav(_savTab);
   toast(name+' добавлено ✓');
 }
@@ -2294,6 +2473,8 @@ function openAddAcc(){
   document.getElementById('m-acc-t').textContent='Добавить счёт';
   document.getElementById('am-id').value='';
   ['am-name','am-bank','am-bal'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('am-own').value='sn';     // сброс к дефолтам, иначе наследуются от ранее редактированного счёта
+  document.getElementById('am-ccy').value='IDR';
   document.getElementById('am-del').style.display='none';
   om('m-acc');
 }
@@ -2316,7 +2497,20 @@ function saveAcc(){
     bank:document.getElementById('am-bank').value||'—',
     ccy:document.getElementById('am-ccy').value,
     bal:parseNum(document.getElementById('am-bal').value)};
-  if(id){const i=D.accounts.findIndex(x=>x.id===+id);if(i>=0)D.accounts[i]=a;else D.accounts.push(a)}
+  if(id){
+    const i=D.accounts.findIndex(x=>x.id===+id);
+    if(i>=0){
+      const old=D.accounts[i];
+      // Смена валюты существующего счёта: иначе старое число молча трактуется как сумма в новой валюте (искажение всех тоталов)
+      if(old.ccy!==a.ccy&&a.bal){
+        if(confirm('Валюта счёта меняется с '+old.ccy+' на '+a.ccy+'.\n\nОК — пересчитать баланс по курсу (сохранить реальную сумму).\nОтмена — оставить введённое число как сумму в новой валюте.')){
+          a.bal=+(toIdr(old.bal,old.ccy)/rateFor(a.ccy)).toFixed(2);
+        }
+        if(D.savPots.some(p=>p.accId===+id))toast('⚠ Проверьте конверты на этом счёте — их суммы в прежней валюте','err');
+      }
+      D.accounts[i]=a;
+    }else D.accounts.push(a);
+  }
   else D.accounts.push(a);
   lsSave();cm('m-acc');rAcc();upHdr();toast('Счёт сохранён ✓');
 }
@@ -2502,6 +2696,7 @@ async function fetchRatesOnline(){
   }catch(e){toast('Не удалось получить курсы: '+e.message,'err');}
   finally{if(btn){btn.textContent=old;btn.disabled=false;}}
 }
+function delCatFact(id){for(let m=0;m<12;m++)delete D.fact[id+'_'+m];}   // чистим факт удаляемой статьи (не оставляем сирот в D.fact)
 function rCatEd(elId,cats,type){
   const el=document.getElementById(elId);if(!el)return;
   if(type==='sav'){rSavCatEd(el);return;}
@@ -2522,7 +2717,8 @@ function rCatEd(elId,cats,type){
   });
   el.querySelectorAll('.ce-d').forEach(btn=>{
     btn.addEventListener('click',e=>{const{i,t}=e.target.dataset;
-      (t==='exp'?D.expCats:D.savCats).splice(+i,1);lsSave();rCatEd(elId,t==='exp'?D.expCats:D.savCats,t);});
+      const arr=(t==='exp'?D.expCats:D.savCats);const d=arr[+i];if(d)delCatFact(d.id);
+      arr.splice(+i,1);lsSave();rCatEd(elId,arr,t);});
   });
 }
 /* Редактор целей накоплений: название, сумма цели (млн Rp), статус, закрыть/открыть, удалить.
@@ -2563,6 +2759,7 @@ function rSavCatEd(el){
   el.querySelectorAll('.ce-d').forEach(btn=>btn.addEventListener('click',e=>{
     const i=+e.target.dataset.i;
     if(!confirm('Удалить цель «'+D.savCats[i].name+'» целиком? Чтобы скрыть достигнутую цель, лучше «Закрыть».'))return;
+    delCatFact(D.savCats[i].id);
     D.savCats.splice(i,1);lsSave();rerender();}));
 }
 
@@ -2714,7 +2911,7 @@ function bindButtons(){
 function rAll(){
   upHdr();renderNav();
   const id=document.querySelector('.pg.act')?.id?.replace('pg-','');
-  ({overview:rOv,income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
+  ({overview:()=>spOv(_ovTab),income:rInc,planfact:()=>spPF(_pfTab),expenses:rExp,savings:()=>spSav(_savTab),accounts:rAcc,settings:rSet})[id]?.();
 }
 
 /* ═══════════════ AUTH GATE ═══════════════ */
@@ -2735,7 +2932,7 @@ function mergeDefaults(obj){
   d.rates={...defData().rates,...(d.rates||{})};   // подмешиваем новые курсы (THB и т.п.) в старые данные
   return d;
 }
-function bootData(){rOv();upHdr();renderNav();}
+function bootData(){if(D)syncIncFactAll();rOv();upHdr();renderNav();}
 function initAuth(){
   if(AUTH.mode!=='login'){D=mergeDefaults(lsLoad());bootData();return;}
   showGate();
